@@ -47,6 +47,7 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Bound fuzz-smoke concurrency to avoid deadline flakes on high-core hosts.
 - Preserve large JSON numbers in attributes without `float64` precision loss.
 - Invoke registered member validators only once during configured decoding.
 - Preserve explicitly empty string members, including empty resource IDs and
