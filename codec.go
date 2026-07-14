@@ -682,7 +682,9 @@ func decodeMeta(raw json.RawMessage, path string) (Meta, error) {
 			continue
 		}
 		var item any
-		if err := json.Unmarshal(value, &item); err != nil {
+		decoder := json.NewDecoder(bytes.NewReader(value))
+		decoder.UseNumber()
+		if err := decoder.Decode(&item); err != nil {
 			return nil, decodeFailure(path+"/"+escapePointerToken(name), "syntax", "invalid meta value", err)
 		}
 		meta[name] = stripAtMembers(item)

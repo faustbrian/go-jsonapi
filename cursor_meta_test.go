@@ -115,3 +115,22 @@ func TestCursorItemMetaRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected cursor: %q present=%v", cursor, present)
 	}
 }
+
+func TestCursorPageMetaPreservesLargeDecodedIntegers(t *testing.T) {
+	t.Parallel()
+
+	document, err := Unmarshal([]byte(`{
+		"data":[],
+		"meta":{"page":{"total":9007199254740993}}
+	}`))
+	if err != nil {
+		t.Fatalf("decode document: %v", err)
+	}
+	metadata, _, err := ParseCursorPageMeta(document.Meta)
+	if err != nil {
+		t.Fatalf("parse cursor metadata: %v", err)
+	}
+	if metadata.Total == nil || *metadata.Total != 9007199254740993 {
+		t.Fatalf("large integer lost precision: %#v", metadata.Total)
+	}
+}
