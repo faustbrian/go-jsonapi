@@ -254,6 +254,22 @@ If tags or reflection are used, they must remain understandable and optional.
 
 This package should be treated as infrastructure, not app glue.
 
+Meaningful `100%` coverage for production package code is required.
+
+That requirement does not mean “touch every line somehow.” It means tests must
+exercise and prove the behavior of:
+
+- happy paths
+- edge cases
+- malformed inputs
+- branch behavior
+- error paths
+- protocol and document invariants
+- extension and profile semantics
+
+Coverage games are not acceptable. Hitting lines without proving behavior does
+not satisfy this goal.
+
 Testing must include:
 
 - unit tests for all core document operations
@@ -297,6 +313,7 @@ At minimum, pull requests must have automated checks that prove:
 
 - the code builds
 - tests pass
+- meaningful `100%` production-code coverage is maintained
 - formatting is enforced
 - lint and static-analysis gates are green
 - documentation examples do not silently rot
@@ -359,6 +376,7 @@ This goal is achieved when:
   Pagination profile
 - the public API is stable enough for real service adoption
 - conformance coverage is documented and verified
+- meaningful `100%` production-code coverage is documented and enforced
 - performance is reasonable for high-traffic APIs
 - GitHub Actions quality gates and release automation are in place
 - user-facing docs are complete enough for direct adoption
