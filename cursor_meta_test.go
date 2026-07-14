@@ -1,7 +1,9 @@
 package jsonapi
 
 import (
+	"encoding/json"
 	"errors"
+	"math"
 	"testing"
 )
 
@@ -76,6 +78,11 @@ func TestCursorPageMetaRejectsInvalidValues(t *testing.T) {
 	if _, err := (CursorPageMeta{Total: &negative}).Meta(); err == nil {
 		t.Fatal("expected negative total error")
 	}
+	if _, err := (CursorPageMeta{
+		EstimatedTotal: &CursorEstimatedTotal{BestGuess: &negative},
+	}).Meta(); err == nil {
+		t.Fatal("expected negative estimate error")
+	}
 
 	tests := []struct {
 		meta Meta
@@ -95,6 +102,104 @@ func TestCursorPageMetaRejectsInvalidValues(t *testing.T) {
 		}
 		if validationError.Violations[0].Path != test.path {
 			t.Fatalf("unexpected violation: %#v", validationError.Violations[0])
+		}
+	}
+}
+
+func TestParseCursorMetadataAcceptsPackageAndMetaObjectRepresentations(t *testing.T) {
+	t.Parallel()
+
+	total := int64(20)
+	bestGuess := int64(25)
+	truncated := true
+	meta, err := (CursorPageMeta{
+		RangeTruncated: &truncated,
+		Total:          &total,
+		EstimatedTotal: &CursorEstimatedTotal{BestGuess: &bestGuess},
+	}).Meta()
+	if err != nil {
+		t.Fatalf("build cursor metadata: %v", err)
+	}
+	parsed, present, err := ParseCursorPageMeta(meta)
+	if err != nil || !present || parsed.Total == nil || *parsed.Total != total ||
+		parsed.EstimatedTotal == nil || parsed.EstimatedTotal.BestGuess == nil ||
+		*parsed.EstimatedTotal.BestGuess != bestGuess {
+		t.Fatalf("unexpected package metadata parse: %#v present=%v err=%v", parsed, present, err)
+	}
+
+	parsed, present, err = ParseCursorPageMeta(Meta{"page": Meta{"total": int8(3)}})
+	if err != nil || !present || parsed.Total == nil || *parsed.Total != 3 {
+		t.Fatalf("unexpected Meta object parse: %#v present=%v err=%v", parsed, present, err)
+	}
+
+	emptyEstimate, err := (CursorPageMeta{
+		EstimatedTotal: &CursorEstimatedTotal{},
+	}).Meta()
+	if err != nil {
+		t.Fatalf("build empty estimate: %v", err)
+	}
+	parsed, _, err = ParseCursorPageMeta(emptyEstimate)
+	if err != nil || parsed.EstimatedTotal == nil || parsed.EstimatedTotal.BestGuess != nil {
+		t.Fatalf("empty estimate was not preserved: %#v err=%v", parsed, err)
+	}
+}
+
+func TestCursorIntegerSupportsPublicMetaNumberRepresentations(t *testing.T) {
+	t.Parallel()
+
+	valid := []any{
+		int(7), int8(7), int16(7), int32(7), int64(7),
+		uint(7), uint8(7), uint16(7), uint32(7), uint64(7),
+		float64(7), json.Number("7"),
+	}
+	for _, value := range valid {
+		got, ok := cursorInteger(value)
+		if !ok || got != 7 {
+			t.Fatalf("integer representation %T was rejected: got %d ok=%v", value, got, ok)
+		}
+	}
+
+	invalid := []any{
+		uint64(math.MaxUint64),
+		float64(1.5),
+		math.Inf(1),
+		json.Number("not-a-number"),
+		"7",
+	}
+	for _, value := range invalid {
+		if got, ok := cursorInteger(value); ok {
+			t.Fatalf("invalid representation %T was accepted as %d", value, got)
+		}
+	}
+}
+
+func TestParseCursorItemMetaPresenceAndTypeSemantics(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		meta    Meta
+		present bool
+		path    string
+	}{
+		{meta: nil, present: false},
+		{meta: Meta{"page": Meta{}}, present: false},
+		{meta: Meta{"page": "invalid"}, present: false, path: "/meta/page"},
+		{meta: Meta{"page": map[string]any{"cursor": 7}}, present: true, path: "/meta/page/cursor"},
+	}
+	for _, test := range tests {
+		_, present, err := ParseCursorItemMeta(test.meta)
+		if present != test.present {
+			t.Fatalf("unexpected presence for %#v: got %v", test.meta, present)
+		}
+		if test.path == "" && err != nil {
+			t.Fatalf("unexpected item meta error: %v", err)
+		}
+		if test.path != "" {
+			var validationError *ValidationError
+			if !errors.As(err, &validationError) ||
+				validationError.Violations[0].Path != test.path {
+				t.Fatalf("unexpected item meta error: %T %#v", err, validationError)
+			}
 		}
 	}
 }

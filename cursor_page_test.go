@@ -133,4 +133,23 @@ func TestValidateCursorPageAtUsesNestedRelationshipPaths(t *testing.T) {
 	if !hasViolation(validationError, "/data/relationships/comments/links/prev", "required") {
 		t.Fatalf("unexpected nested violations: %#v", validationError.Violations)
 	}
+
+	page.Links = Links{"prev": NullLink()}
+	err = page.ValidateAt("/data/relationships/comments")
+	if !errors.As(err, &validationError) ||
+		!hasViolation(validationError, "/data/relationships/comments/links/next", "required") {
+		t.Fatalf("missing nested next-link violation: %#v", validationError)
+	}
+}
+
+func TestAppendCursorMetaErrorHandlesNonValidationErrors(t *testing.T) {
+	t.Parallel()
+
+	validator := documentValidator{}
+	validator.appendCursorMetaError(errors.New("profile validator failed"), "/meta")
+	if len(validator.violations) != 1 ||
+		validator.violations[0].Path != "/meta" ||
+		validator.violations[0].Code != "invalid" {
+		t.Fatalf("unexpected generic metadata violation: %#v", validator.violations)
+	}
 }

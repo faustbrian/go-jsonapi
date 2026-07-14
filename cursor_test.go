@@ -96,6 +96,21 @@ func TestCursorPaginationRejectsInvalidParameters(t *testing.T) {
 			parameter: "page[size]",
 			code:      "invalid-parameter",
 		},
+		"size is not empty": {
+			family:    ParameterFamily{"page[size]": {""}},
+			parameter: "page[size]",
+			code:      "invalid-parameter",
+		},
+		"size contains only decimal digits": {
+			family:    ParameterFamily{"page[size]": {"1x"}},
+			parameter: "page[size]",
+			code:      "invalid-parameter",
+		},
+		"size fits an integer": {
+			family:    ParameterFamily{"page[size]": {"999999999999999999999999999"}},
+			parameter: "page[size]",
+			code:      "invalid-parameter",
+		},
 		"size occurs once": {
 			family:    ParameterFamily{"page[size]": {"1", "2"}},
 			parameter: "page[size]",
@@ -110,6 +125,11 @@ func TestCursorPaginationRejectsInvalidParameters(t *testing.T) {
 			family:    ParameterFamily{"page[after]": {"invalid"}},
 			parameter: "page[after]",
 			code:      "invalid-parameter",
+		},
+		"cursor occurs once": {
+			family:    ParameterFamily{"page[before]": {"one", "two"}},
+			parameter: "page[before]",
+			code:      "multiple-values",
 		},
 		"range must be supported": {
 			family: ParameterFamily{
@@ -150,6 +170,7 @@ func TestCursorPaginationRejectsInvalidConfiguration(t *testing.T) {
 
 	invalid := []CursorPaginationConfig{
 		{DefaultSize: 0, MaxSize: 10},
+		{DefaultSize: 10, MaxSize: -1},
 		{DefaultSize: 11, MaxSize: 10},
 		{DefaultSize: 10, AllowRange: true},
 	}
@@ -157,6 +178,33 @@ func TestCursorPaginationRejectsInvalidConfiguration(t *testing.T) {
 		if _, err := NewCursorPagination(config); err == nil {
 			t.Fatalf("expected invalid config error: %#v", config)
 		}
+	}
+}
+
+func TestCursorPaginationParseQueryReturnsPageErrorsBeforeSortValidation(t *testing.T) {
+	t.Parallel()
+
+	sortCalled := false
+	pagination, err := NewCursorPagination(CursorPaginationConfig{
+		DefaultSize: 10,
+		MaxSize:     50,
+		ValidateSort: func([]SortField) error {
+			sortCalled = true
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("construct pagination parser: %v", err)
+	}
+	_, err = pagination.ParseQuery(Query{
+		Page: ParameterFamily{"page[size]": {"0"}},
+	})
+	var pageError *CursorPaginationError
+	if !errors.As(err, &pageError) || pageError.Parameter != "page[size]" {
+		t.Fatalf("unexpected page error: %T %#v", err, pageError)
+	}
+	if sortCalled {
+		t.Fatal("sort validation ran after invalid page parameters")
 	}
 }
 
