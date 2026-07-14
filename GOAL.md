@@ -13,6 +13,15 @@ maintained foundation that can become a trusted default.
 It is expected to become a full-spec open source package with no intentional
 spec divergences or compliance gaps.
 
+For this package, that means:
+
+- full compliance with the JSON:API core specification
+- full compliance with every official JSON:API extension or profile the
+  package claims to support
+- strong documented support for the official JSON:API recommendations where
+  applicable, while keeping recommendations distinct from normative spec
+  requirements
+
 ## Product Position
 
 `go-jsonapi` should be:
@@ -50,6 +59,8 @@ or depend on abandoned packages.
 ### In Scope
 
 - complete support for the core JSON:API specification
+- complete support for the official Atomic Operations extension
+- complete support for the official Cursor Pagination profile
 - request and response document modeling
 - resource objects, relationships, links, meta, errors, and included data
 - compound documents
@@ -61,13 +72,16 @@ or depend on abandoned packages.
 - deterministic serialization
 - deserialization into typed application-facing structures
 - extension points for project-specific conventions
+- support for the official JSON:API recommendations where they apply to server
+  behavior, naming, URL design, filtering, links, asynchronous processing, and
+  related consistency rules
 - high-quality test fixtures and conformance tests
 - clear compatibility promises and versioning
 
 ### Potentially In Scope After Core Stabilizes
 
-- common extension support patterns
-- cursor pagination conventions
+- additional extension support patterns beyond the official listed extension
+- additional profile support patterns beyond the official listed profile
 - OpenAPI or schema generation helpers
 - client helpers
 - middleware for popular routers
@@ -98,6 +112,12 @@ The package must implement the full JSON:API specification intentionally,
 including all behavior required to honestly present the package as spec
 compliant.
 
+For the first serious public version, that must include:
+
+- the JSON:API core specification
+- the official Atomic Operations extension
+- the official Cursor Pagination profile
+
 Features must be documented as:
 
 - implemented
@@ -106,6 +126,12 @@ Features must be documented as:
 
 Do not leave behavior ambiguous.
 Do not ship a version advertised as compliant while known gaps remain.
+
+Recommendations must also be documented clearly:
+
+- which recommendations are implemented
+- which recommendations are intentionally not implemented
+- where a recommendation is not normative but is still adopted for consistency
 
 ### 2. Deterministic Output
 
@@ -151,6 +177,9 @@ If an application needs a project-specific behavior, it must live behind an
 explicit extension seam and must not be misrepresented as standard JSON:API
 behavior.
 
+The same applies to official extensions and profiles. If the package claims
+support for them, that support must be complete and non-divergent.
+
 ## First-Version Deliverables
 
 ### Package Surface
@@ -177,6 +206,8 @@ The repository should include:
 - spec behavior coverage matrix
 - benchmark suite for representative documents
 - explicit proof that every required spec behavior is covered
+- extension and profile coverage matrices
+- recommendation coverage notes
 
 ### Documentation
 
@@ -187,6 +218,8 @@ The repository must ship with:
 - architecture overview
 - supported-features matrix
 - conformance matrix
+- extension and profile support matrix
+- recommendations support matrix
 - extension guide
 - migration notes
 - compatibility policy
@@ -213,6 +246,9 @@ Testing must include:
 - fuzzing for parsing and decoding surfaces
 - benchmarks for common response shapes
 - clear coverage for every required spec rule
+- clear coverage for Atomic Operations behavior
+- clear coverage for Cursor Pagination behavior
+- clear documentation coverage for official recommendations support
 
 The package should not claim full-spec support until the conformance matrix
 proves it.
@@ -273,6 +309,10 @@ That means:
 This goal is achieved when:
 
 - the package can honestly claim full JSON:API spec compliance
+- the package can honestly claim full support for the official Atomic
+  Operations extension
+- the package can honestly claim full support for the official Cursor
+  Pagination profile
 - the public API is stable enough for real service adoption
 - conformance coverage is documented and verified
 - performance is reasonable for high-traffic APIs
@@ -284,4 +324,5 @@ This goal is achieved when:
 - Do not add speculative app-specific convenience layers too early.
 - Do not claim “full JSON:API support” without a concrete support matrix.
 - Do not ship intentional spec deviations disguised as extensions.
+- Do not blur recommendations into normative spec rules.
 - Do not start with extensions before the core spec is solid.
