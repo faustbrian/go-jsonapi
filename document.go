@@ -161,10 +161,33 @@ type Links map[string]Link
 // Link is a string, object, or null JSON:API link value. Construct values with
 // URI, ObjectLink, or NullLink.
 type Link struct {
-	href   string
-	meta   Meta
-	object bool
-	null   bool
+	href        string
+	rel         string
+	describedBy *Link
+	title       string
+	targetType  string
+	hreflang    *LinkHreflang
+	meta        Meta
+	object      bool
+	null        bool
+}
+
+// LinkObject contains every member supported by a JSON:API 1.1 link object.
+type LinkObject struct {
+	Href        string
+	Rel         string
+	DescribedBy *Link
+	Title       string
+	Type        string
+	Hreflang    *LinkHreflang
+	Meta        Meta
+}
+
+// LinkHreflang represents the scalar or array form of a link object's
+// hreflang member. Construct values with LanguageTag or LanguageTags.
+type LinkHreflang struct {
+	values []string
+	many   bool
 }
 
 // URI returns a link represented by a URI string.
@@ -174,7 +197,34 @@ func URI(href string) Link {
 
 // ObjectLink returns a link object with an href and optional meta object.
 func ObjectLink(href string, meta Meta) Link {
-	return Link{href: href, meta: meta, object: true}
+	return LinkFromObject(LinkObject{Href: href, Meta: meta})
+}
+
+// LinkFromObject returns a link represented by a JSON:API 1.1 link object.
+func LinkFromObject(object LinkObject) Link {
+	return Link{
+		href:        object.Href,
+		rel:         object.Rel,
+		describedBy: object.DescribedBy,
+		title:       object.Title,
+		targetType:  object.Type,
+		hreflang:    object.Hreflang,
+		meta:        object.Meta,
+		object:      true,
+	}
+}
+
+// LanguageTag returns the scalar form of a link object's hreflang member.
+func LanguageTag(tag string) *LinkHreflang {
+	return &LinkHreflang{values: []string{tag}}
+}
+
+// LanguageTags returns the array form of a link object's hreflang member.
+func LanguageTags(tags ...string) *LinkHreflang {
+	values := make([]string, len(tags))
+	copy(values, tags)
+
+	return &LinkHreflang{values: values, many: true}
 }
 
 // NullLink returns a null link.
@@ -192,12 +242,36 @@ func (link Link) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(struct {
-		Href string `json:"href"`
-		Meta Meta   `json:"meta,omitempty"`
+		Href        string `json:"href"`
+		Rel         string `json:"rel,omitempty"`
+		DescribedBy *Link  `json:"describedby,omitempty"`
+		Title       string `json:"title,omitempty"`
+		Type        string `json:"type,omitempty"`
+		Hreflang    any    `json:"hreflang,omitempty"`
+		Meta        Meta   `json:"meta,omitempty"`
 	}{
-		Href: link.href,
-		Meta: link.meta,
+		Href:        link.href,
+		Rel:         link.rel,
+		DescribedBy: link.describedBy,
+		Title:       link.title,
+		Type:        link.targetType,
+		Hreflang:    link.hreflangValue(),
+		Meta:        link.meta,
 	})
+}
+
+func (link Link) hreflangValue() any {
+	if link.hreflang == nil {
+		return nil
+	}
+	if link.hreflang.many {
+		return link.hreflang.values
+	}
+	if len(link.hreflang.values) == 0 {
+		return ""
+	}
+
+	return link.hreflang.values[0]
 }
 
 // ErrorObject describes one JSON:API error.

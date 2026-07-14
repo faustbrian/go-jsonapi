@@ -2,11 +2,17 @@ package jsonapi
 
 import (
 	"fmt"
+	"mime"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/language"
 )
+
+var registeredLinkRelation = regexp.MustCompile(`^[a-z][a-z0-9.-]*$`)
 
 // Violation describes one JSON:API conformance failure.
 type Violation struct {
@@ -186,10 +192,64 @@ func (validator *documentValidator) validateLinks(links Links, path string) {
 		if !validMemberName(name) {
 			validator.add(linkPath, "member-name", "link name is invalid")
 		}
-		if !link.null {
-			validator.validateURL(link.href, linkPath)
+		validator.validateLink(link, linkPath)
+	}
+}
+
+func (validator *documentValidator) validateLink(link Link, path string) {
+	if link.null {
+		return
+	}
+	if link.object && link.href == "" {
+		validator.add(path+"/href", "required", "link object href is required")
+	} else {
+		validator.validateURL(link.href, path)
+	}
+	if link.rel != "" && !validLinkRelation(link.rel) {
+		validator.add(path+"/rel", "link-relation", "rel must be a registered relation or URI")
+	}
+	if link.describedBy != nil {
+		validator.validateLink(*link.describedBy, path+"/describedby")
+	}
+	if link.targetType != "" {
+		if mediaType, _, err := mime.ParseMediaType(link.targetType); err != nil || mediaType == "" {
+			validator.add(path+"/type", "media-type", "type must be a valid media type")
 		}
 	}
+	if link.hreflang != nil {
+		for _, tag := range link.hreflang.values {
+			if !validLanguageTag(tag) {
+				validator.add(path+"/hreflang", "language-tag", "hreflang must contain valid language tags")
+				break
+			}
+		}
+	}
+}
+
+func validLanguageTag(tag string) bool {
+	if tag == "" || strings.HasPrefix(tag, "-") || strings.HasSuffix(tag, "-") || strings.Contains(tag, "--") {
+		return false
+	}
+	for _, character := range tag {
+		if character != '-' &&
+			!(character >= 'a' && character <= 'z') &&
+			!(character >= 'A' && character <= 'Z') &&
+			!(character >= '0' && character <= '9') {
+			return false
+		}
+	}
+	_, err := language.Parse(tag)
+
+	return err == nil
+}
+
+func validLinkRelation(relation string) bool {
+	if registeredLinkRelation.MatchString(relation) {
+		return true
+	}
+	parsed, err := url.Parse(relation)
+
+	return err == nil && parsed.IsAbs()
 }
 
 func (validator *documentValidator) validateURL(value, path string) {

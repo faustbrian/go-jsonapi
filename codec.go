@@ -427,25 +427,82 @@ func decodeLink(raw json.RawMessage, path string) (Link, error) {
 	if err != nil {
 		return Link{}, err
 	}
-	if err := rejectUnknown(object, path, "href", "meta"); err != nil {
+	if err := rejectUnknown(
+		object,
+		path,
+		"href",
+		"rel",
+		"describedby",
+		"title",
+		"type",
+		"hreflang",
+		"meta",
+	); err != nil {
 		return Link{}, err
 	}
-	var href string
+	var result LinkObject
 	if value, exists := object["href"]; exists {
-		if err := decodeString(value, path+"/href", &href); err != nil {
+		if err := decodeString(value, path+"/href", &result.Href); err != nil {
 			return Link{}, err
 		}
 	}
-	var meta Meta
+	for name, target := range map[string]*string{
+		"rel":   &result.Rel,
+		"title": &result.Title,
+		"type":  &result.Type,
+	} {
+		if value, exists := object[name]; exists {
+			if err := decodeString(value, path+"/"+name, target); err != nil {
+				return Link{}, err
+			}
+		}
+	}
+	if value, exists := object["describedby"]; exists {
+		describedBy, decodeErr := decodeLink(value, path+"/describedby")
+		if decodeErr != nil {
+			return Link{}, decodeErr
+		}
+		result.DescribedBy = &describedBy
+	}
+	if value, exists := object["hreflang"]; exists {
+		hreflang, decodeErr := decodeHreflang(value, path+"/hreflang")
+		if decodeErr != nil {
+			return Link{}, decodeErr
+		}
+		result.Hreflang = hreflang
+	}
 	if value, exists := object["meta"]; exists {
 		decoded, decodeErr := decodeMeta(value, path+"/meta")
 		if decodeErr != nil {
 			return Link{}, decodeErr
 		}
-		meta = decoded
+		result.Meta = decoded
 	}
 
-	return ObjectLink(href, meta), nil
+	return LinkFromObject(result), nil
+}
+
+func decodeHreflang(raw json.RawMessage, path string) (*LinkHreflang, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return nil, decodeFailure(path, "type", "hreflang has no value", nil)
+	}
+	if trimmed[0] == '"' {
+		var tag string
+		if err := decodeString(trimmed, path, &tag); err != nil {
+			return nil, err
+		}
+		return LanguageTag(tag), nil
+	}
+	if trimmed[0] != '[' {
+		return nil, decodeFailure(path, "type", "hreflang must be a string or array of strings", nil)
+	}
+	var tags []string
+	if err := decodeStringArray(trimmed, path, &tags); err != nil {
+		return nil, err
+	}
+
+	return LanguageTags(tags...), nil
 }
 
 func decodeErrors(raw json.RawMessage, path string) ([]ErrorObject, error) {
