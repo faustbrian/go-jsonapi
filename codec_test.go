@@ -248,6 +248,16 @@ func TestUnmarshalRejectsMalformedDocuments(t *testing.T) {
 			path:    "/data/relationships",
 			code:    "type",
 		},
+		"resource links is not object": {
+			payload: `{"data":{"type":"articles","id":"1","links":[]}}`,
+			path:    "/data/links",
+			code:    "type",
+		},
+		"resource meta is not object": {
+			payload: `{"data":{"type":"articles","id":"1","meta":[]}}`,
+			path:    "/data/meta",
+			code:    "type",
+		},
 		"relationship is not object": {
 			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":null}}}`,
 			path:    "/data/relationships/author",
@@ -356,6 +366,11 @@ func TestUnmarshalRejectsMalformedDocuments(t *testing.T) {
 		"error source is not object": {
 			payload: `{"errors":[{"source":[]}]}`,
 			path:    "/errors/0/source",
+			code:    "type",
+		},
+		"error links is not object": {
+			payload: `{"errors":[{"links":[]}]}`,
+			path:    "/errors/0/links",
 			code:    "type",
 		},
 		"unknown error source member": {
