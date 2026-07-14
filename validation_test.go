@@ -140,6 +140,26 @@ func TestValidateRejectsInvalidDocuments(t *testing.T) {
 	}
 }
 
+func TestValidateWithAllowsSparseFieldsetFullLinkageException(t *testing.T) {
+	t.Parallel()
+
+	document := Document{
+		Data: ResourceData(ResourceObject{Type: "articles", ID: "1"}),
+		Included: []ResourceObject{
+			{Type: "people", ID: "9"},
+		},
+	}
+
+	if err := document.Validate(); err == nil {
+		t.Fatal("expected ordinary validation to enforce full linkage")
+	}
+	if err := document.ValidateWith(ValidationOptions{
+		SparseFieldsetsOmittedLinkage: true,
+	}); err != nil {
+		t.Fatalf("expected sparse fieldset exception to validate: %v", err)
+	}
+}
+
 func TestValidateAcceptsValidCompoundDocument(t *testing.T) {
 	t.Parallel()
 

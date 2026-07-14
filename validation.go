@@ -51,6 +51,10 @@ type ValidationOptions struct {
 	Context      ValidationContext
 	ExpectedType string
 	ExpectedID   string
+	// SparseFieldsetsOmittedLinkage applies the sole specification exception
+	// to full linkage. Set it only when requested sparse fieldsets omitted the
+	// relationship fields that would otherwise link included resources.
+	SparseFieldsetsOmittedLinkage bool
 }
 
 // Error implements error.
@@ -512,7 +516,7 @@ func (validator *documentValidator) validateIncluded(
 	}
 
 	for key, index := range included {
-		if !reachable[key] {
+		if !reachable[key] && !validator.options.SparseFieldsetsOmittedLinkage {
 			validator.add(
 				"/included/"+strconv.Itoa(index),
 				"full-linkage",
