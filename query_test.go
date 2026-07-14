@@ -111,6 +111,11 @@ func TestParseQueryRejectsMalformedOrUnknownParameters(t *testing.T) {
 			parameter: "future",
 			code:      "unknown-parameter",
 		},
+		"unregistered extension namespace": {
+			values:    url.Values{"atomic:mode": {"ordered"}},
+			parameter: "atomic:mode",
+			code:      "unknown-parameter",
+		},
 		"unregistered custom family": {
 			values:    url.Values{"customFlag": {"true"}},
 			parameter: "customFlag",
@@ -126,6 +131,26 @@ func TestParseQueryRejectsMalformedOrUnknownParameters(t *testing.T) {
 			parameter: "page[size",
 			code:      "invalid-name",
 		},
+		"family starts with selector": {
+			values:    url.Values{"[size]": {"10"}},
+			parameter: "[size]",
+			code:      "invalid-name",
+		},
+		"family has trailing characters": {
+			values:    url.Values{"filter[tag]tail": {"go"}},
+			parameter: "filter[tag]tail",
+			code:      "invalid-name",
+		},
+		"include cannot have selectors": {
+			values:    url.Values{"include[path]": {"author"}},
+			parameter: "include[path]",
+			code:      "invalid-name",
+		},
+		"include occurs once": {
+			values:    url.Values{"include": {"author", "comments"}},
+			parameter: "include",
+			code:      "multiple-values",
+		},
 		"empty include path component": {
 			values:    url.Values{"include": {"comments..author"}},
 			parameter: "include",
@@ -135,6 +160,36 @@ func TestParseQueryRejectsMalformedOrUnknownParameters(t *testing.T) {
 			values:    url.Values{"fields[bad/type]": {"title"}},
 			parameter: "fields[bad/type]",
 			code:      "invalid-name",
+		},
+		"fieldset requires one selector": {
+			values:    url.Values{"fields": {"title"}},
+			parameter: "fields",
+			code:      "invalid-name",
+		},
+		"fieldset type is not a path": {
+			values:    url.Values{"fields[articles.name]": {"title"}},
+			parameter: "fields[articles.name]",
+			code:      "invalid-name",
+		},
+		"fieldset occurs once": {
+			values:    url.Values{"fields[articles]": {"title", "body"}},
+			parameter: "fields[articles]",
+			code:      "multiple-values",
+		},
+		"fieldset contains valid members": {
+			values:    url.Values{"fields[articles]": {"title,bad/name"}},
+			parameter: "fields[articles]",
+			code:      "invalid-value",
+		},
+		"sort cannot have selectors": {
+			values:    url.Values{"sort[field]": {"title"}},
+			parameter: "sort[field]",
+			code:      "invalid-name",
+		},
+		"sort fields are valid paths": {
+			values:    url.Values{"sort": {"-"}},
+			parameter: "sort",
+			code:      "invalid-value",
 		},
 		"repeated singular parameter": {
 			values:    url.Values{"sort": {"title", "created"}},
@@ -163,6 +218,35 @@ func TestNewQueryParserRejectsInvalidRegistration(t *testing.T) {
 	_, err = NewQueryParser(nil, []string{"bad-namespace"})
 	if err == nil {
 		t.Fatal("expected invalid extension namespace error")
+	}
+	_, err = NewQueryParser([]string{"customFlag", "customFlag"}, nil)
+	if err == nil {
+		t.Fatal("expected duplicate custom family error")
+	}
+	_, err = NewQueryParser(nil, []string{"atomic", "atomic"})
+	if err == nil {
+		t.Fatal("expected duplicate extension namespace error")
+	}
+}
+
+func TestQueryNameGrammarBoundaries(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"", "[value]", "filter[value]tail", "filter[value"} {
+		if _, _, valid := parseFamilyName(name); valid {
+			t.Fatalf("malformed family name accepted: %q", name)
+		}
+	}
+	for _, base := range []string{":mode", "atomic:", "bad-name:mode", "atomic:Mode"} {
+		if _, valid := extensionQueryBase(base); valid {
+			t.Fatalf("malformed extension base accepted: %q", base)
+		}
+	}
+	if validExtensionNamespace("") {
+		t.Fatal("empty extension namespace accepted")
+	}
+	if onlyLowercaseASCII("") || onlyLowercaseASCII("lowerCase") {
+		t.Fatal("invalid lowercase ASCII value accepted")
 	}
 }
 
