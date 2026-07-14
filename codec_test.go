@@ -1,9 +1,38 @@
 package jsonapi
 
 import (
+	"bytes"
 	"errors"
+	"os"
 	"testing"
 )
+
+func TestCanonicalValidDocumentFixturesRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	fixtures := []string{
+		"testdata/valid/compound-document.json",
+		"testdata/valid/error-document.json",
+	}
+	for _, fixture := range fixtures {
+		payload, err := os.ReadFile(fixture)
+		if err != nil {
+			t.Fatalf("read fixture %s: %v", fixture, err)
+		}
+		payload = bytes.TrimSpace(payload)
+		document, err := Unmarshal(payload)
+		if err != nil {
+			t.Fatalf("decode fixture %s: %v", fixture, err)
+		}
+		encoded, err := Marshal(document)
+		if err != nil {
+			t.Fatalf("encode fixture %s: %v", fixture, err)
+		}
+		if string(encoded) != string(payload) {
+			t.Fatalf("fixture %s changed:\n got: %s\nwant: %s", fixture, encoded, payload)
+		}
+	}
+}
 
 func TestUnmarshalProducesCanonicalValidatedDocument(t *testing.T) {
 	t.Parallel()
@@ -90,6 +119,24 @@ func TestUnmarshalIgnoresAtMembers(t *testing.T) {
 	want := `{"data":{"type":"articles","id":"1","attributes":{"title":"JSON:API"}}}`
 	if string(got) != want {
 		t.Fatalf("unexpected JSON: got %s, want %s", got, want)
+	}
+}
+
+func TestUnmarshalIgnoresNestedAtMembersInsideArrays(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","attributes":{"blocks":[{"@type":"Note","body":"kept"},["value",{"@id":"ignored","name":"kept"}]]}}}`)
+	document, err := Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("unmarshal document: %v", err)
+	}
+	encoded, err := Marshal(document)
+	if err != nil {
+		t.Fatalf("marshal document: %v", err)
+	}
+	want := `{"data":{"type":"articles","id":"1","attributes":{"blocks":[{"body":"kept"},["value",{"name":"kept"}]]}}}`
+	if string(encoded) != want {
+		t.Fatalf("unexpected JSON: got %s, want %s", encoded, want)
 	}
 }
 
