@@ -66,10 +66,11 @@ func (document Document) MarshalJSON() ([]byte, error) {
 // JSONAPI describes the JSON:API implementation and applied extensions and
 // profiles.
 type JSONAPI struct {
-	Version string   `json:"version,omitempty"`
-	Ext     []string `json:"ext,omitempty"`
-	Profile []string `json:"profile,omitempty"`
-	Meta    Meta     `json:"meta,omitempty"`
+	Version           string   `json:"version,omitempty"`
+	Ext               []string `json:"ext,omitempty"`
+	Profile           []string `json:"profile,omitempty"`
+	Meta              Meta     `json:"meta,omitempty"`
+	AdditionalMembers Members  `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -88,7 +89,7 @@ func (object JSONAPI) MarshalJSON() ([]byte, error) {
 		meta = &object.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		Version string    `json:"version,omitempty"`
 		Ext     *[]string `json:"ext,omitempty"`
 		Profile *[]string `json:"profile,omitempty"`
@@ -98,7 +99,9 @@ func (object JSONAPI) MarshalJSON() ([]byte, error) {
 		Ext:     extensions,
 		Profile: profiles,
 		Meta:    meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, object.AdditionalMembers)
 }
 
 // ResourceObject is a JSON:API resource object.

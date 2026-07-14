@@ -417,3 +417,66 @@ func TestCodecRoundTripsToManyIdentifierExtensionMembers(t *testing.T) {
 		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
 	}
 }
+
+func TestCodecRoundTripsJSONAPIObjectExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: JSONAPIMemberScope,
+			Name:  "version:build",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"jsonapi":{"version":"1.1","version:build":"2026.07"},"data":null}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode jsonapi extension document: %v", err)
+	}
+	if document.JSONAPI == nil ||
+		document.JSONAPI.AdditionalMembers["version:build"] != "2026.07" {
+		t.Fatalf("jsonapi member was not preserved: %#v", document.JSONAPI)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode jsonapi extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsJSONAPIObjectExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"jsonapi":{"version":"1.1","version:build":"2026.07"},"data":null}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/jsonapi/version:build" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{
+		JSONAPI: &JSONAPI{
+			Version:           "1.1",
+			AdditionalMembers: Members{"version:build": "2026.07"},
+		},
+		Data: NullData(),
+	})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/jsonapi/version:build",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}

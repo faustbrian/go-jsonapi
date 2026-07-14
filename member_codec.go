@@ -21,6 +21,7 @@ const (
 	ResourceMemberScope
 	RelationshipMemberScope
 	IdentifierMemberScope
+	JSONAPIMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -79,7 +80,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 			if definition.Scope != TopLevelMemberScope &&
 				definition.Scope != ResourceMemberScope &&
 				definition.Scope != RelationshipMemberScope &&
-				definition.Scope != IdentifierMemberScope {
+				definition.Scope != IdentifierMemberScope &&
+				definition.Scope != JSONAPIMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -133,6 +135,19 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
+	var jsonapiMembers Members
+	if raw, exists := root["jsonapi"]; exists {
+		sanitized, extracted, sanitizeErr := codec.sanitizeObject(
+			raw,
+			JSONAPIMemberScope,
+			"/jsonapi",
+		)
+		if sanitizeErr != nil {
+			return Document{}, sanitizeErr
+		}
+		root["jsonapi"] = sanitized
+		jsonapiMembers = extracted
+	}
 
 	var primaryMembers []resourceMemberState
 	if raw, exists := root["data"]; exists {
@@ -161,6 +176,9 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		return Document{}, err
 	}
 	document.AdditionalMembers = topMembers
+	if document.JSONAPI != nil {
+		document.JSONAPI.AdditionalMembers = jsonapiMembers
+	}
 	attachPrimaryMembers(document.Data, primaryMembers)
 	for index := range document.Included {
 		if index < len(includedMembers) {
@@ -175,6 +193,23 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	}
 
 	return document, nil
+}
+
+func (codec *Codec) sanitizeObject(
+	raw json.RawMessage,
+	scope MemberScope,
+	path string,
+) (json.RawMessage, Members, error) {
+	object, err := decodeObject(raw, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	members, err := codec.extractMembers(object, scope, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, members, err
 }
 
 func (codec *Codec) sanitizePrimaryData(
@@ -448,24 +483,19 @@ func validateDocumentMembers(
 	registry map[MemberScope]map[string]MemberDefinition,
 ) error {
 	validator := documentValidator{}
-	for name, value := range document.AdditionalMembers {
-		definition, exists := registry[TopLevelMemberScope][name]
-		if !exists {
-			validator.add(
-				"/"+escapePointerToken(name),
-				"unregistered-member",
-				"member is not registered for this object scope",
-			)
-			continue
-		}
-		if definition.Validate != nil {
-			if err := definition.Validate(value); err != nil {
-				validator.violations = append(
-					validator.violations,
-					memberValueViolation("", name, err),
-				)
-			}
-		}
+	validateScopedMembers(
+		&validator,
+		document.AdditionalMembers,
+		registry[TopLevelMemberScope],
+		"",
+	)
+	if document.JSONAPI != nil {
+		validateScopedMembers(
+			&validator,
+			document.JSONAPI.AdditionalMembers,
+			registry[JSONAPIMemberScope],
+			"/jsonapi",
+		)
 	}
 	for _, observation := range documentResources(document) {
 		for name, value := range observation.resource.AdditionalMembers {
