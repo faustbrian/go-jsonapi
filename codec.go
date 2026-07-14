@@ -42,6 +42,9 @@ func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
 	if err := document.ValidateWith(options); err != nil {
 		return nil, err
 	}
+	if err := validateDocumentMembers(document, nil); err != nil {
+		return nil, err
+	}
 
 	return json.Marshal(document)
 }

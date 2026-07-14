@@ -100,13 +100,14 @@ func (object JSONAPI) MarshalJSON() ([]byte, error) {
 
 // ResourceObject is a JSON:API resource object.
 type ResourceObject struct {
-	Type          string        `json:"type"`
-	ID            string        `json:"id,omitempty"`
-	LID           string        `json:"lid,omitempty"`
-	Attributes    Attributes    `json:"attributes,omitempty"`
-	Relationships Relationships `json:"relationships,omitempty"`
-	Links         Links         `json:"links,omitempty"`
-	Meta          Meta          `json:"meta,omitempty"`
+	Type              string        `json:"type"`
+	ID                string        `json:"id,omitempty"`
+	LID               string        `json:"lid,omitempty"`
+	Attributes        Attributes    `json:"attributes,omitempty"`
+	Relationships     Relationships `json:"relationships,omitempty"`
+	Links             Links         `json:"links,omitempty"`
+	Meta              Meta          `json:"meta,omitempty"`
+	AdditionalMembers Members       `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -129,7 +130,7 @@ func (resource ResourceObject) MarshalJSON() ([]byte, error) {
 		meta = &resource.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		Type          string         `json:"type"`
 		ID            string         `json:"id,omitempty"`
 		LID           string         `json:"lid,omitempty"`
@@ -145,7 +146,9 @@ func (resource ResourceObject) MarshalJSON() ([]byte, error) {
 		Relationships: relationships,
 		Links:         links,
 		Meta:          meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, resource.AdditionalMembers)
 }
 
 // Identifier identifies a resource by type and either server or local ID.

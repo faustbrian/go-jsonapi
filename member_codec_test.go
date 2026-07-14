@@ -1,0 +1,168 @@
+package jsonapi
+
+import (
+	"errors"
+	"testing"
+)
+
+func TestCodecRoundTripsRegisteredResourceExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: ResourceMemberScope,
+			Name:  "version:id",
+			Validate: func(value any) error {
+				if _, ok := value.(string); !ok {
+					return errors.New("version id must be a string")
+				}
+				return nil
+			},
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{
+		"data":{"type":"articles","id":"1","version:id":"42"},
+		"jsonapi":{"version":"1.1","ext":["https://example.com/ext/version"]}
+	}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode extension document: %v", err)
+	}
+	resource := document.Data.one
+	if resource == nil || resource.AdditionalMembers["version:id"] != "42" {
+		t.Fatalf("extension member was not preserved: %#v", resource)
+	}
+
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode extension document: %v", err)
+	}
+	want := `{"jsonapi":{"version":"1.1","ext":["https://example.com/ext/version"]},"data":{"type":"articles","id":"1","version:id":"42"}}`
+	if string(encoded) != want {
+		t.Fatalf("unexpected extension document:\n got: %s\nwant: %s", encoded, want)
+	}
+}
+
+func TestCodecRejectsInvalidRegisteredMemberValue(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: ResourceMemberScope,
+			Name:  "version:id",
+			Validate: func(value any) error {
+				if _, ok := value.(string); !ok {
+					return errors.New("version id must be a string")
+				}
+				return nil
+			},
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	_, err = codec.Unmarshal([]byte(`{
+		"data":{"type":"articles","id":"1","version:id":42}
+	}`))
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+	if !hasViolation(validationError, "/data/version:id", "member-value") {
+		t.Fatalf("unexpected violations: %#v", validationError.Violations)
+	}
+}
+
+func TestCoreCodecRejectsUnregisteredExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	_, err := Unmarshal([]byte(`{
+		"data":{"type":"articles","id":"1","version:id":"42"}
+	}`))
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) || decodeError.Path != "/data/version:id" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected unregistered member error: %T %#v", err, decodeError)
+	}
+}
+
+func TestCoreMarshalRejectsUnregisteredExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	document := Document{Data: ResourceData(ResourceObject{
+		Type:              "articles",
+		ID:                "1",
+		AdditionalMembers: Members{"version:id": "42"},
+	})}
+	_, err := Marshal(document)
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(validationError, "/data/version:id", "unregistered-member") {
+		t.Fatalf("unexpected marshal error: %T %#v", err, validationError)
+	}
+}
+
+func TestNewCodecRejectsInvalidExtensionDefinitions(t *testing.T) {
+	t.Parallel()
+
+	tests := []CodecOptions{
+		{Extensions: []ExtensionDefinition{{URI: "/relative", Namespace: "version"}}},
+		{Extensions: []ExtensionDefinition{{URI: "https://example.com/ext", Namespace: "bad-name"}}},
+		{Extensions: []ExtensionDefinition{{
+			URI:       "https://example.com/ext",
+			Namespace: "version",
+			Members: []MemberDefinition{{
+				Scope: ResourceMemberScope,
+				Name:  "other:id",
+			}},
+		}}},
+		{Extensions: []ExtensionDefinition{
+			{
+				URI:       "https://example.com/one",
+				Namespace: "one",
+				Members:   []MemberDefinition{{Scope: ResourceMemberScope, Name: "one:id"}},
+			},
+			{
+				URI:       "https://example.com/two",
+				Namespace: "two",
+				Members:   []MemberDefinition{{Scope: ResourceMemberScope, Name: "one:id"}},
+			},
+		}},
+	}
+	for _, options := range tests {
+		if _, err := NewCodec(options); err == nil {
+			t.Fatalf("expected invalid codec options: %#v", options)
+		}
+	}
+}
+
+func TestCodecRejectsUnregisteredApplicationMemberOnMarshal(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+	document := Document{Data: ResourceData(ResourceObject{
+		Type:              "articles",
+		ID:                "1",
+		AdditionalMembers: Members{"version:id": "42"},
+	})}
+	_, err = codec.Marshal(document)
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+	if !hasViolation(validationError, "/data/version:id", "unregistered-member") {
+		t.Fatalf("unexpected violations: %#v", validationError.Violations)
+	}
+}
