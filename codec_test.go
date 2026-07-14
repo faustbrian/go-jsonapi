@@ -111,6 +111,41 @@ func TestUnmarshalRejectsMalformedDocuments(t *testing.T) {
 			path:    "",
 			code:    "type",
 		},
+		"jsonapi is not object": {
+			payload: `{"jsonapi":[],"data":null}`,
+			path:    "/jsonapi",
+			code:    "type",
+		},
+		"unknown jsonapi member": {
+			payload: `{"jsonapi":{"unknown":true},"data":null}`,
+			path:    "/jsonapi/unknown",
+			code:    "unknown-member",
+		},
+		"jsonapi version is not string": {
+			payload: `{"jsonapi":{"version":1},"data":null}`,
+			path:    "/jsonapi/version",
+			code:    "type",
+		},
+		"jsonapi ext is not array": {
+			payload: `{"jsonapi":{"ext":null},"data":null}`,
+			path:    "/jsonapi/ext",
+			code:    "type",
+		},
+		"jsonapi ext item is not string": {
+			payload: `{"jsonapi":{"ext":[1]},"data":null}`,
+			path:    "/jsonapi/ext",
+			code:    "type",
+		},
+		"jsonapi profile is not array": {
+			payload: `{"jsonapi":{"profile":{}},"data":null}`,
+			path:    "/jsonapi/profile",
+			code:    "type",
+		},
+		"jsonapi meta is not object": {
+			payload: `{"jsonapi":{"meta":[]},"data":null}`,
+			path:    "/jsonapi/meta",
+			code:    "type",
+		},
 		"unknown top-level member": {
 			payload: `{"data":null,"unknown":true}`,
 			path:    "/unknown",
@@ -120,6 +155,31 @@ func TestUnmarshalRejectsMalformedDocuments(t *testing.T) {
 			payload: `{"data":{"type":"articles","id":"1","unknown":true}}`,
 			path:    "/data/unknown",
 			code:    "unknown-member",
+		},
+		"resource collection is null": {
+			payload: `{"data":null,"included":null}`,
+			path:    "/included",
+			code:    "type",
+		},
+		"resource collection item is not object": {
+			payload: `{"data":[null]}`,
+			path:    "/data/0",
+			code:    "type",
+		},
+		"resource type is not string": {
+			payload: `{"data":{"type":1,"id":"1"}}`,
+			path:    "/data/type",
+			code:    "type",
+		},
+		"resource id is not string": {
+			payload: `{"data":{"type":"articles","id":1}}`,
+			path:    "/data/id",
+			code:    "type",
+		},
+		"resource lid is not string": {
+			payload: `{"data":{"type":"articles","lid":1}}`,
+			path:    "/data/lid",
+			code:    "type",
 		},
 		"primary data has scalar shape": {
 			payload: `{"data":"articles"}`,
@@ -136,9 +196,134 @@ func TestUnmarshalRejectsMalformedDocuments(t *testing.T) {
 			path:    "/data/attributes",
 			code:    "type",
 		},
+		"relationships is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":[]}}`,
+			path:    "/data/relationships",
+			code:    "type",
+		},
+		"relationship is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":null}}}`,
+			path:    "/data/relationships/author",
+			code:    "type",
+		},
+		"unknown relationship member": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"unknown":true}}}}`,
+			path:    "/data/relationships/author/unknown",
+			code:    "unknown-member",
+		},
+		"relationship links is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"links":[]}}}}`,
+			path:    "/data/relationships/author/links",
+			code:    "type",
+		},
+		"relationship meta is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"meta":[]}}}}`,
+			path:    "/data/relationships/author/meta",
+			code:    "type",
+		},
+		"identifier item is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"tags":{"data":[null]}}}}`,
+			path:    "/data/relationships/tags/data/0",
+			code:    "type",
+		},
+		"unknown identifier member": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9","unknown":true}}}}}`,
+			path:    "/data/relationships/author/data/unknown",
+			code:    "unknown-member",
+		},
+		"identifier type is not string": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":1,"id":"9"}}}}}`,
+			path:    "/data/relationships/author/data/type",
+			code:    "type",
+		},
+		"identifier meta is not object": {
+			payload: `{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9","meta":[]}}}}}`,
+			path:    "/data/relationships/author/data/meta",
+			code:    "type",
+		},
+		"links is not object": {
+			payload: `{"data":null,"links":[]}`,
+			path:    "/links",
+			code:    "type",
+		},
 		"link has invalid shape": {
 			payload: `{"data":null,"links":{"self":42}}`,
 			path:    "/links/self",
+			code:    "type",
+		},
+		"unknown link object member": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","unknown":true}}}`,
+			path:    "/links/self/unknown",
+			code:    "unknown-member",
+		},
+		"link href is not string": {
+			payload: `{"data":null,"links":{"self":{"href":1}}}`,
+			path:    "/links/self/href",
+			code:    "type",
+		},
+		"link rel is not string": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","rel":1}}}`,
+			path:    "/links/self/rel",
+			code:    "type",
+		},
+		"link describedby has invalid shape": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","describedby":1}}}`,
+			path:    "/links/self/describedby",
+			code:    "type",
+		},
+		"link hreflang has invalid shape": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","hreflang":1}}}`,
+			path:    "/links/self/hreflang",
+			code:    "type",
+		},
+		"link hreflang item is not string": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","hreflang":[1]}}}`,
+			path:    "/links/self/hreflang",
+			code:    "type",
+		},
+		"link meta is not object": {
+			payload: `{"data":null,"links":{"self":{"href":"/articles","meta":[]}}}`,
+			path:    "/links/self/meta",
+			code:    "type",
+		},
+		"errors is not array": {
+			payload: `{"errors":null}`,
+			path:    "/errors",
+			code:    "type",
+		},
+		"error item is not object": {
+			payload: `{"errors":[null]}`,
+			path:    "/errors/0",
+			code:    "type",
+		},
+		"unknown error member": {
+			payload: `{"errors":[{"unknown":true}]}`,
+			path:    "/errors/0/unknown",
+			code:    "unknown-member",
+		},
+		"error status is not string": {
+			payload: `{"errors":[{"status":409}]}`,
+			path:    "/errors/0/status",
+			code:    "type",
+		},
+		"error source is not object": {
+			payload: `{"errors":[{"source":[]}]}`,
+			path:    "/errors/0/source",
+			code:    "type",
+		},
+		"unknown error source member": {
+			payload: `{"errors":[{"source":{"unknown":true}}]}`,
+			path:    "/errors/0/source/unknown",
+			code:    "unknown-member",
+		},
+		"error meta is not object": {
+			payload: `{"errors":[{"meta":[]}]}`,
+			path:    "/errors/0/meta",
+			code:    "type",
+		},
+		"top-level meta is not object": {
+			payload: `{"meta":[]}`,
+			path:    "/meta",
 			code:    "type",
 		},
 	}
