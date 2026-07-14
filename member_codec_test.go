@@ -600,3 +600,103 @@ func TestCoreCodecRejectsErrorSourceExtensionMember(t *testing.T) {
 		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
 	}
 }
+
+func TestCodecRoundTripsNestedLinkObjectExtensionMembers(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: LinkObjectMemberScope,
+			Name:  "version:cache",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"links":{"self":{"href":"/articles","describedby":{"href":"/schema","version:cache":"miss"},"version:cache":"hit"}},"data":null}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode link extension document: %v", err)
+	}
+	link := document.Links["self"]
+	if link.additionalMembers["version:cache"] != "hit" ||
+		link.describedBy == nil ||
+		link.describedBy.additionalMembers["version:cache"] != "miss" {
+		t.Fatalf("link members were not preserved: %#v", link)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode link extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsLinkObjectExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"links":{"self":{"href":"/articles","version:cache":"hit"}},"data":null}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/links/self/version:cache" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{
+		Links: Links{"self": LinkFromObject(LinkObject{
+			Href:              "/articles",
+			AdditionalMembers: Members{"version:cache": "hit"},
+		})},
+		Data: NullData(),
+	})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/links/self/version:cache",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
+
+func TestCodecRoundTripsLinkObjectMembersAtEveryLinksContainer(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: LinkObjectMemberScope,
+			Name:  "version:cache",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payloads := []string{
+		`{"data":{"type":"articles","id":"1","links":{"self":{"href":"/articles/1","version:cache":"resource"}}}}`,
+		`{"data":{"type":"articles","id":"1","relationships":{"author":{"links":{"related":{"href":"/author","version:cache":"relationship"}}}}}}`,
+		`{"errors":[{"links":{"about":{"href":"/errors/1","version:cache":"error"}}}]}`,
+	}
+	for _, payload := range payloads {
+		document, decodeErr := codec.Unmarshal([]byte(payload))
+		if decodeErr != nil {
+			t.Fatalf("decode link placement %s: %v", payload, decodeErr)
+		}
+		encoded, encodeErr := codec.Marshal(document)
+		if encodeErr != nil {
+			t.Fatalf("encode link placement %s: %v", payload, encodeErr)
+		}
+		if string(encoded) != payload {
+			t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+		}
+	}
+}

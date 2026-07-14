@@ -325,26 +325,28 @@ type Links map[string]Link
 // Link is a string, object, or null JSON:API link value. Construct values with
 // URI, ObjectLink, or NullLink.
 type Link struct {
-	href        string
-	rel         string
-	describedBy *Link
-	title       string
-	targetType  string
-	hreflang    *LinkHreflang
-	meta        Meta
-	object      bool
-	null        bool
+	href              string
+	rel               string
+	describedBy       *Link
+	title             string
+	targetType        string
+	hreflang          *LinkHreflang
+	meta              Meta
+	additionalMembers Members
+	object            bool
+	null              bool
 }
 
 // LinkObject contains every member supported by a JSON:API 1.1 link object.
 type LinkObject struct {
-	Href        string
-	Rel         string
-	DescribedBy *Link
-	Title       string
-	Type        string
-	Hreflang    *LinkHreflang
-	Meta        Meta
+	Href              string
+	Rel               string
+	DescribedBy       *Link
+	Title             string
+	Type              string
+	Hreflang          *LinkHreflang
+	Meta              Meta
+	AdditionalMembers Members
 }
 
 // LinkHreflang represents the scalar or array form of a link object's
@@ -367,14 +369,15 @@ func ObjectLink(href string, meta Meta) Link {
 // LinkFromObject returns a link represented by a JSON:API 1.1 link object.
 func LinkFromObject(object LinkObject) Link {
 	return Link{
-		href:        object.Href,
-		rel:         object.Rel,
-		describedBy: object.DescribedBy,
-		title:       object.Title,
-		targetType:  object.Type,
-		hreflang:    object.Hreflang,
-		meta:        object.Meta,
-		object:      true,
+		href:              object.Href,
+		rel:               object.Rel,
+		describedBy:       object.DescribedBy,
+		title:             object.Title,
+		targetType:        object.Type,
+		hreflang:          object.Hreflang,
+		meta:              object.Meta,
+		additionalMembers: object.AdditionalMembers,
+		object:            true,
 	}
 }
 
@@ -410,7 +413,7 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		meta = &link.meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		Href        string `json:"href"`
 		Rel         string `json:"rel,omitempty"`
 		DescribedBy *Link  `json:"describedby,omitempty"`
@@ -426,7 +429,9 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		Type:        link.targetType,
 		Hreflang:    link.hreflangValue(),
 		Meta:        meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, link.additionalMembers)
 }
 
 func (link Link) hreflangValue() any {

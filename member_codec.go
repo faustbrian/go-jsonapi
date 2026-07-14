@@ -24,6 +24,7 @@ const (
 	JSONAPIMemberScope
 	ErrorMemberScope
 	ErrorSourceMemberScope
+	LinkObjectMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -85,7 +86,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 				definition.Scope != IdentifierMemberScope &&
 				definition.Scope != JSONAPIMemberScope &&
 				definition.Scope != ErrorMemberScope &&
-				definition.Scope != ErrorSourceMemberScope {
+				definition.Scope != ErrorSourceMemberScope &&
+				definition.Scope != LinkObjectMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -152,6 +154,15 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		root["jsonapi"] = sanitized
 		jsonapiMembers = extracted
 	}
+	var documentLinks map[string]linkMemberState
+	if raw, exists := root["links"]; exists {
+		sanitized, extracted, sanitizeErr := codec.sanitizeLinks(raw, "/links")
+		if sanitizeErr != nil {
+			return Document{}, sanitizeErr
+		}
+		root["links"] = sanitized
+		documentLinks = extracted
+	}
 
 	var primaryMembers []resourceMemberState
 	if raw, exists := root["data"]; exists {
@@ -192,6 +203,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if document.JSONAPI != nil {
 		document.JSONAPI.AdditionalMembers = jsonapiMembers
 	}
+	attachLinkMembers(document.Links, documentLinks)
 	attachPrimaryMembers(document.Data, primaryMembers)
 	for index := range document.Included {
 		if index < len(includedMembers) {
@@ -201,6 +213,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	for index := range document.Errors {
 		if index < len(errorMembers) {
 			document.Errors[index].AdditionalMembers = errorMembers[index].members
+			attachLinkMembers(document.Errors[index].Links, errorMembers[index].links)
 			if document.Errors[index].Source != nil {
 				document.Errors[index].Source.AdditionalMembers = errorMembers[index].source
 			}
@@ -236,6 +249,17 @@ func (codec *Codec) sanitizeErrors(
 			return nil, nil, err
 		}
 		state := errorMemberState{members: extracted}
+		if rawLinks, exists := object["links"]; exists {
+			sanitizedLinks, links, sanitizeErr := codec.sanitizeLinks(
+				rawLinks,
+				itemPath+"/links",
+			)
+			if sanitizeErr != nil {
+				return nil, nil, sanitizeErr
+			}
+			object["links"] = sanitizedLinks
+			state.links = links
+		}
 		if rawSource, exists := object["source"]; exists {
 			sanitizedSource, sourceMembers, sanitizeErr := codec.sanitizeObject(
 				rawSource,
@@ -262,6 +286,71 @@ func (codec *Codec) sanitizeErrors(
 type errorMemberState struct {
 	members Members
 	source  Members
+	links   map[string]linkMemberState
+}
+
+type linkMemberState struct {
+	members     Members
+	describedBy *linkMemberState
+}
+
+func (codec *Codec) sanitizeLinks(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, map[string]linkMemberState, error) {
+	object, err := decodeObject(raw, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	states := make(map[string]linkMemberState)
+	for name, rawLink := range object {
+		trimmed := bytes.TrimSpace(rawLink)
+		if len(trimmed) == 0 || trimmed[0] != '{' {
+			continue
+		}
+		linkPath := path + "/" + escapePointerToken(name)
+		sanitized, state, sanitizeErr := codec.sanitizeLinkObject(rawLink, linkPath)
+		if sanitizeErr != nil {
+			return nil, nil, sanitizeErr
+		}
+		object[name] = sanitized
+		if len(state.members) > 0 || state.describedBy != nil {
+			states[name] = state
+		}
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, states, err
+}
+
+func (codec *Codec) sanitizeLinkObject(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, linkMemberState, error) {
+	object, err := decodeObject(raw, path)
+	if err != nil {
+		return nil, linkMemberState{}, err
+	}
+	members, err := codec.extractMembers(object, LinkObjectMemberScope, path)
+	if err != nil {
+		return nil, linkMemberState{}, err
+	}
+	state := linkMemberState{members: members}
+	if rawDescribedBy, exists := object["describedby"]; exists {
+		trimmed := bytes.TrimSpace(rawDescribedBy)
+		if len(trimmed) > 0 && trimmed[0] == '{' {
+			sanitized, nested, sanitizeErr := codec.sanitizeLinkObject(
+				rawDescribedBy,
+				path+"/describedby",
+			)
+			if sanitizeErr != nil {
+				return nil, linkMemberState{}, sanitizeErr
+			}
+			object["describedby"] = sanitized
+			state.describedBy = &nested
+		}
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, state, err
 }
 
 func (codec *Codec) sanitizeObject(
@@ -333,6 +422,14 @@ func (codec *Codec) sanitizeResource(
 		return nil, resourceMemberState{}, err
 	}
 	state := resourceMemberState{members: members}
+	if rawLinks, exists := object["links"]; exists {
+		sanitized, links, sanitizeErr := codec.sanitizeLinks(rawLinks, path+"/links")
+		if sanitizeErr != nil {
+			return nil, resourceMemberState{}, sanitizeErr
+		}
+		object["links"] = sanitized
+		state.links = links
+	}
 	if rawRelationships, exists := object["relationships"]; exists {
 		sanitized, relationships, sanitizeErr := codec.sanitizeRelationships(
 			rawRelationships,
@@ -350,11 +447,13 @@ func (codec *Codec) sanitizeResource(
 
 type resourceMemberState struct {
 	members       Members
+	links         map[string]linkMemberState
 	relationships map[string]relationshipMemberState
 }
 
 type relationshipMemberState struct {
 	members     Members
+	links       map[string]linkMemberState
 	identifiers []Members
 }
 
@@ -382,6 +481,17 @@ func (codec *Codec) sanitizeRelationships(
 			return nil, nil, extractErr
 		}
 		state := relationshipMemberState{members: members}
+		if rawLinks, exists := relationship["links"]; exists {
+			sanitizedLinks, links, sanitizeErr := codec.sanitizeLinks(
+				rawLinks,
+				relationshipPath+"/links",
+			)
+			if sanitizeErr != nil {
+				return nil, nil, sanitizeErr
+			}
+			relationship["links"] = sanitizedLinks
+			state.links = links
+		}
 		if rawData, exists := relationship["data"]; exists {
 			sanitizedData, identifiers, sanitizeErr := codec.sanitizeIdentifierData(
 				rawData,
@@ -398,7 +508,7 @@ func (codec *Codec) sanitizeRelationships(
 			return nil, nil, marshalErr
 		}
 		object[name] = sanitized
-		if len(state.members) > 0 || len(state.identifiers) > 0 {
+		if len(state.members) > 0 || len(state.links) > 0 || len(state.identifiers) > 0 {
 			states[name] = state
 		}
 	}
@@ -520,14 +630,37 @@ func attachPrimaryMembers(data *PrimaryData, members []resourceMemberState) {
 
 func attachResourceMembers(resource *ResourceObject, state resourceMemberState) {
 	resource.AdditionalMembers = state.members
+	attachLinkMembers(resource.Links, state.links)
 	for name, relationshipState := range state.relationships {
 		relationship, exists := resource.Relationships[name]
 		if !exists {
 			continue
 		}
 		relationship.AdditionalMembers = relationshipState.members
+		attachLinkMembers(relationship.Links, relationshipState.links)
 		attachIdentifierMembers(relationship.Data, relationshipState.identifiers)
 		resource.Relationships[name] = relationship
+	}
+}
+
+func attachLinkMembers(links Links, states map[string]linkMemberState) {
+	for name, state := range states {
+		link, exists := links[name]
+		if !exists {
+			continue
+		}
+		link.additionalMembers = state.members
+		if link.describedBy != nil && state.describedBy != nil {
+			attachLinkState(link.describedBy, *state.describedBy)
+		}
+		links[name] = link
+	}
+}
+
+func attachLinkState(link *Link, state linkMemberState) {
+	link.additionalMembers = state.members
+	if link.describedBy != nil && state.describedBy != nil {
+		attachLinkState(link.describedBy, *state.describedBy)
 	}
 }
 
@@ -566,6 +699,12 @@ func validateDocumentMembers(
 			"/jsonapi",
 		)
 	}
+	validateLinkDocumentMembers(
+		&validator,
+		document.Links,
+		"/links",
+		registry[LinkObjectMemberScope],
+	)
 	for index, apiError := range document.Errors {
 		path := "/errors/" + fmt.Sprintf("%d", index)
 		validateScopedMembers(
@@ -573,6 +712,12 @@ func validateDocumentMembers(
 			apiError.AdditionalMembers,
 			registry[ErrorMemberScope],
 			path,
+		)
+		validateLinkDocumentMembers(
+			&validator,
+			apiError.Links,
+			path+"/links",
+			registry[LinkObjectMemberScope],
 		)
 		if apiError.Source != nil {
 			validateScopedMembers(
@@ -584,6 +729,12 @@ func validateDocumentMembers(
 		}
 	}
 	for _, observation := range documentResources(document) {
+		validateLinkDocumentMembers(
+			&validator,
+			observation.resource.Links,
+			observation.path+"/links",
+			registry[LinkObjectMemberScope],
+		)
 		for name, value := range observation.resource.AdditionalMembers {
 			definition, exists := registry[ResourceMemberScope][name]
 			if !exists {
@@ -605,6 +756,12 @@ func validateDocumentMembers(
 		}
 		for name, relationship := range observation.resource.Relationships {
 			path := observation.path + "/relationships/" + escapePointerToken(name)
+			validateLinkDocumentMembers(
+				&validator,
+				relationship.Links,
+				path+"/links",
+				registry[LinkObjectMemberScope],
+			)
 			for memberName, value := range relationship.AdditionalMembers {
 				definition, exists := registry[RelationshipMemberScope][memberName]
 				if !exists {
@@ -636,6 +793,34 @@ func validateDocumentMembers(
 		return nil
 	}
 	return &ValidationError{Violations: validator.violations}
+}
+
+func validateLinkDocumentMembers(
+	validator *documentValidator,
+	links Links,
+	path string,
+	registry map[string]MemberDefinition,
+) {
+	for name, link := range links {
+		validateLinkStateMembers(
+			validator,
+			link,
+			path+"/"+escapePointerToken(name),
+			registry,
+		)
+	}
+}
+
+func validateLinkStateMembers(
+	validator *documentValidator,
+	link Link,
+	path string,
+	registry map[string]MemberDefinition,
+) {
+	validateScopedMembers(validator, link.additionalMembers, registry, path)
+	if link.describedBy != nil {
+		validateLinkStateMembers(validator, *link.describedBy, path+"/describedby", registry)
+	}
 }
 
 func validateIdentifierDocumentMembers(
