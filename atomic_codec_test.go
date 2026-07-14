@@ -136,3 +136,26 @@ func TestUnmarshalAtomicReportsReferenceFieldsInDocumentOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestAtomicCodecAppliesProtocolContext(t *testing.T) {
+	t.Parallel()
+
+	_, err := UnmarshalAtomicWith(
+		[]byte(`{"atomic:results":[{}]}`),
+		AtomicValidationOptions{Context: AtomicRequestContext},
+	)
+	if err == nil {
+		t.Fatal("expected request context violation")
+	}
+
+	_, err = MarshalAtomicWith(
+		AtomicDocument{Results: []AtomicResult{{}}},
+		AtomicValidationOptions{
+			Context:             AtomicResponseContext,
+			ExpectedResultCount: 2,
+		},
+	)
+	if err == nil {
+		t.Fatal("expected response result count violation")
+	}
+}

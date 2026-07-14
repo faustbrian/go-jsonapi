@@ -8,7 +8,16 @@ import (
 // MarshalAtomic validates and deterministically encodes an Atomic Operations
 // document.
 func MarshalAtomic(document AtomicDocument) ([]byte, error) {
-	if err := document.Validate(); err != nil {
+	return MarshalAtomicWith(document, AtomicValidationOptions{})
+}
+
+// MarshalAtomicWith validates in the supplied Atomic protocol context and
+// deterministically encodes a document.
+func MarshalAtomicWith(
+	document AtomicDocument,
+	options AtomicValidationOptions,
+) ([]byte, error) {
+	if err := document.ValidateWith(options); err != nil {
 		return nil, err
 	}
 
@@ -18,6 +27,15 @@ func MarshalAtomic(document AtomicDocument) ([]byte, error) {
 // UnmarshalAtomic strictly decodes and validates an Atomic Operations
 // document.
 func UnmarshalAtomic(payload []byte) (AtomicDocument, error) {
+	return UnmarshalAtomicWith(payload, AtomicValidationOptions{})
+}
+
+// UnmarshalAtomicWith strictly decodes and validates a document in the
+// supplied Atomic protocol context.
+func UnmarshalAtomicWith(
+	payload []byte,
+	options AtomicValidationOptions,
+) (AtomicDocument, error) {
 	if !json.Valid(payload) {
 		return AtomicDocument{}, decodeFailure("", "syntax", "invalid JSON", nil)
 	}
@@ -102,7 +120,7 @@ func UnmarshalAtomic(payload []byte) (AtomicDocument, error) {
 		document.Meta = meta
 	}
 
-	if err := document.Validate(); err != nil {
+	if err := document.ValidateWith(options); err != nil {
 		return AtomicDocument{}, err
 	}
 

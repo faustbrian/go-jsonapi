@@ -14,6 +14,21 @@ const (
 	AtomicRemove AtomicOperationCode = "remove"
 )
 
+// AtomicValidationContext identifies an Atomic Operations protocol boundary.
+type AtomicValidationContext uint8
+
+const (
+	AtomicGenericContext AtomicValidationContext = iota
+	AtomicRequestContext
+	AtomicResponseContext
+)
+
+// AtomicValidationOptions configures request or response validation.
+type AtomicValidationOptions struct {
+	Context             AtomicValidationContext
+	ExpectedResultCount int
+}
+
 // AtomicDocument is a document using the official Atomic Operations
 // extension. Operations, results, errors, and meta retain nil-versus-empty
 // presence semantics.
@@ -51,6 +66,11 @@ type AtomicResult struct {
 
 // Validate checks Atomic Operations document and operation invariants.
 func (document AtomicDocument) Validate() error {
+	return document.ValidateWith(AtomicValidationOptions{})
+}
+
+// ValidateWith checks an Atomic document in a request or response context.
+func (document AtomicDocument) ValidateWith(options AtomicValidationOptions) error {
 	validator := documentValidator{}
 
 	if document.Operations == nil && document.Results == nil &&
@@ -68,6 +88,33 @@ func (document AtomicDocument) Validate() error {
 	}
 	if (document.Operations != nil || document.Results != nil) && document.Errors != nil {
 		validator.add("/errors", "conflict", "atomic members and errors must not coexist")
+	}
+	switch options.Context {
+	case AtomicRequestContext:
+		if document.Operations == nil {
+			validator.add("/atomic:operations", "required", "atomic request requires operations")
+		}
+		if document.Results != nil {
+			validator.add("/atomic:results", "forbidden", "atomic request must not contain results")
+		}
+		if document.Errors != nil {
+			validator.add("/errors", "forbidden", "atomic request must not contain errors")
+		}
+	case AtomicResponseContext:
+		if document.Operations != nil {
+			validator.add("/atomic:operations", "forbidden", "atomic response must not contain operations")
+		}
+		if document.Results == nil && document.Errors == nil && options.ExpectedResultCount > 0 {
+			validator.add("/atomic:results", "required", "successful atomic response requires results")
+		}
+		if document.Results != nil && options.ExpectedResultCount > 0 &&
+			len(document.Results) != options.ExpectedResultCount {
+			validator.add(
+				"/atomic:results",
+				"result-count",
+				"result count must match the request operation count",
+			)
+		}
 	}
 	if document.JSONAPI != nil {
 		validator.validateJSONAPI(*document.JSONAPI)

@@ -341,3 +341,115 @@ func TestAtomicOperationValidationAcceptsNormativeShapes(t *testing.T) {
 		t.Fatalf("expected valid operations: %v", err)
 	}
 }
+
+func TestAtomicContextValidation(t *testing.T) {
+	t.Parallel()
+
+	validOperation := AtomicOperation{
+		Op:   AtomicAdd,
+		Data: ResourceData(ResourceObject{Type: "articles"}),
+	}
+	tests := map[string]struct {
+		document AtomicDocument
+		options  AtomicValidationOptions
+		path     string
+		code     string
+	}{
+		"request requires operations": {
+			document: AtomicDocument{Meta: Meta{}},
+			options:  AtomicValidationOptions{Context: AtomicRequestContext},
+			path:     "/atomic:operations",
+			code:     "required",
+		},
+		"request forbids results": {
+			document: AtomicDocument{Results: []AtomicResult{{}}},
+			options:  AtomicValidationOptions{Context: AtomicRequestContext},
+			path:     "/atomic:results",
+			code:     "forbidden",
+		},
+		"request forbids errors": {
+			document: AtomicDocument{Errors: []ErrorObject{{Title: "failed"}}},
+			options:  AtomicValidationOptions{Context: AtomicRequestContext},
+			path:     "/errors",
+			code:     "forbidden",
+		},
+		"response forbids operations": {
+			document: AtomicDocument{Operations: []AtomicOperation{validOperation}},
+			options:  AtomicValidationOptions{Context: AtomicResponseContext},
+			path:     "/atomic:operations",
+			code:     "forbidden",
+		},
+		"response result count must match": {
+			document: AtomicDocument{Results: []AtomicResult{{}}},
+			options: AtomicValidationOptions{
+				Context:             AtomicResponseContext,
+				ExpectedResultCount: 2,
+			},
+			path: "/atomic:results",
+			code: "result-count",
+		},
+		"successful response requires results": {
+			document: AtomicDocument{Meta: Meta{}},
+			options: AtomicValidationOptions{
+				Context:             AtomicResponseContext,
+				ExpectedResultCount: 2,
+			},
+			path: "/atomic:results",
+			code: "required",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assertAtomicViolationWith(t, test.document, test.options, test.path, test.code)
+		})
+	}
+}
+
+func TestAtomicContextValidationAcceptsMatchingExchange(t *testing.T) {
+	t.Parallel()
+
+	request := AtomicDocument{Operations: []AtomicOperation{{
+		Op:   AtomicAdd,
+		Data: ResourceData(ResourceObject{Type: "articles"}),
+	}}}
+	if err := request.ValidateWith(AtomicValidationOptions{Context: AtomicRequestContext}); err != nil {
+		t.Fatalf("expected valid request: %v", err)
+	}
+
+	response := AtomicDocument{Results: []AtomicResult{{
+		Data: ResourceData(ResourceObject{Type: "articles", ID: "1"}),
+	}}}
+	if err := response.ValidateWith(AtomicValidationOptions{
+		Context:             AtomicResponseContext,
+		ExpectedResultCount: len(request.Operations),
+	}); err != nil {
+		t.Fatalf("expected valid response: %v", err)
+	}
+}
+
+func assertAtomicViolationWith(
+	t *testing.T,
+	document AtomicDocument,
+	options AtomicValidationOptions,
+	path string,
+	code string,
+) {
+	t.Helper()
+
+	err := document.ValidateWith(options)
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+	for _, violation := range validationError.Violations {
+		if violation.Path == path && violation.Code == code {
+			return
+		}
+	}
+	t.Fatalf("missing violation at %q with code %q: %#v", path, code, validationError.Violations)
+}
