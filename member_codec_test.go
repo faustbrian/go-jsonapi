@@ -700,3 +700,61 @@ func TestCodecRoundTripsLinkObjectMembersAtEveryLinksContainer(t *testing.T) {
 		}
 	}
 }
+
+func TestCodecRoundTripsExtensionMembersAcrossResourceCollections(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{
+		Extensions: []ExtensionDefinition{{
+			URI:       "https://example.com/ext/version",
+			Namespace: "version",
+			Members: []MemberDefinition{
+				{Scope: ResourceMemberScope, Name: "version:id"},
+				{Scope: IdentifierMemberScope, Name: "version:etag"},
+			},
+		}},
+		Profiles: []ProfileDefinition{{
+			URI: "https://example.com/profiles/timestamps",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"data":[{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9","version:etag":"person-9"}}},"version:id":"article-1"},{"type":"articles","id":"2","version:id":"article-2"}],"included":[{"type":"people","id":"9","version:id":"person-9"}]}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode collection extension document: %v", err)
+	}
+	resources := document.Data.many
+	if len(resources) != 2 ||
+		resources[0].AdditionalMembers["version:id"] != "article-1" ||
+		resources[1].AdditionalMembers["version:id"] != "article-2" {
+		t.Fatalf("primary members were not preserved: %#v", resources)
+	}
+	identifier := resources[0].Relationships["author"].Data.one
+	if identifier == nil || identifier.AdditionalMembers["version:etag"] != "person-9" {
+		t.Fatalf("identifier member was not preserved: %#v", identifier)
+	}
+	if len(document.Included) != 1 ||
+		document.Included[0].AdditionalMembers["version:id"] != "person-9" {
+		t.Fatalf("included member was not preserved: %#v", document.Included)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode collection extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+
+	nullPayload := []byte(`{"data":null}`)
+	nullDocument, err := codec.Unmarshal(nullPayload)
+	if err != nil {
+		t.Fatalf("decode null extension document: %v", err)
+	}
+	encoded, err = codec.Marshal(nullDocument)
+	if err != nil || string(encoded) != string(nullPayload) {
+		t.Fatalf("unexpected null round trip: got %s, err %v", encoded, err)
+	}
+}
