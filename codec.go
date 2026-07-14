@@ -57,6 +57,9 @@ func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) 
 	if !json.Valid(payload) {
 		return Document{}, decodeFailure("", "syntax", "invalid JSON", nil)
 	}
+	if err := rejectDuplicateMembers(payload); err != nil {
+		return Document{}, err
+	}
 
 	root, err := decodeObject(payload, "")
 	if err != nil {
@@ -115,6 +118,60 @@ func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) 
 	}
 
 	return document, nil
+}
+
+func rejectDuplicateMembers(payload []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.UseNumber()
+
+	return scanJSONValue(decoder, "")
+}
+
+func scanJSONValue(decoder *json.Decoder, path string) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return decodeFailure(path, "syntax", "invalid JSON token", err)
+	}
+	delimiter, composite := token.(json.Delim)
+	if !composite {
+		return nil
+	}
+
+	switch delimiter {
+	case '{':
+		seen := make(map[string]struct{})
+		for decoder.More() {
+			nameToken, tokenErr := decoder.Token()
+			if tokenErr != nil {
+				return decodeFailure(path, "syntax", "invalid object member", tokenErr)
+			}
+			name, ok := nameToken.(string)
+			if !ok {
+				return decodeFailure(path, "syntax", "object member name must be a string", nil)
+			}
+			memberPath := path + "/" + escapePointerToken(name)
+			if _, exists := seen[name]; exists {
+				return decodeFailure(memberPath, "duplicate-member", "object member occurs more than once", nil)
+			}
+			seen[name] = struct{}{}
+			if err := scanJSONValue(decoder, memberPath); err != nil {
+				return err
+			}
+		}
+	case '[':
+		for index := 0; decoder.More(); index++ {
+			if err := scanJSONValue(decoder, path+"/"+strconv.Itoa(index)); err != nil {
+				return err
+			}
+		}
+	default:
+		return decodeFailure(path, "syntax", "unexpected JSON delimiter", nil)
+	}
+	if _, err := decoder.Token(); err != nil {
+		return decodeFailure(path, "syntax", "unterminated JSON value", err)
+	}
+
+	return nil
 }
 
 func decodeJSONAPI(raw json.RawMessage, path string) (JSONAPI, error) {
