@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -186,6 +185,9 @@ func TestCodecContinuesFromSanitizationIntoCoreValidation(t *testing.T) {
 	if _, err := codec.Unmarshal([]byte(`{"links":{"self":"/articles"},"data":{"type":"articles","id":"1"}}`)); err != nil {
 		t.Fatalf("decode scalar link without registered member: %v", err)
 	}
+	if _, err := codec.Unmarshal([]byte(`{"data":{"type":"articles","id":"1","relationships":{"author":{"data":null}}}}`)); err != nil {
+		t.Fatalf("decode null linkage without registered member: %v", err)
+	}
 }
 
 func TestCodecMarshalRunsRegisteredMemberValidatorsAtEveryScope(t *testing.T) {
@@ -230,12 +232,41 @@ func TestCodecMarshalRunsRegisteredMemberValidatorsAtEveryScope(t *testing.T) {
 	}
 }
 
+func TestCodecUnmarshalRunsEachRegisteredMemberValidatorOnce(t *testing.T) {
+	t.Parallel()
+
+	calls := 0
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext",
+		Namespace: "ext",
+		Members: []MemberDefinition{{
+			Scope: ResourceMemberScope,
+			Name:  "ext:value",
+			Validate: func(any) error {
+				calls++
+				if calls > 1 {
+					return errors.New("validator called more than once")
+				}
+				return nil
+			},
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+	if _, err := codec.Unmarshal([]byte(
+		`{"data":{"type":"articles","id":"1","ext:value":true}}`,
+	)); err != nil {
+		t.Fatalf("decode registered member: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("validator called %d times, want 1", calls)
+	}
+}
+
 func TestMemberCodecHelpersRejectInvalidSyntheticValues(t *testing.T) {
 	t.Parallel()
 
-	if _, err := decodeAdditionalMember(json.RawMessage(`{`), "/ext:value"); err == nil {
-		t.Fatal("expected malformed additional member failure")
-	}
 	if _, err := marshalObjectWithMembers(42, Members{"ext:value": true}); err == nil {
 		t.Fatal("expected non-object core failure")
 	}

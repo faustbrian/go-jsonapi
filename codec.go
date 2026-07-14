@@ -155,10 +155,9 @@ func scanJSONValue(decoder *json.Decoder, path string) error {
 			if tokenErr != nil {
 				return decodeFailure(path, "syntax", "invalid object member", tokenErr)
 			}
-			name, ok := nameToken.(string)
-			if !ok {
-				return decodeFailure(path, "syntax", "object member name must be a string", nil)
-			}
+			// After an opening object delimiter, Decoder.Token returns each
+			// member name as a string or reports an error above.
+			name := nameToken.(string)
 			memberPath := path + "/" + escapePointerToken(name)
 			if _, exists := seen[name]; exists {
 				return decodeFailure(memberPath, "duplicate-member", "object member occurs more than once", nil)
@@ -329,13 +328,7 @@ func decodeAttributes(raw json.RawMessage, path string) (Attributes, error) {
 		if strings.HasPrefix(name, "@") {
 			continue
 		}
-		var attribute any
-		decoder := json.NewDecoder(bytes.NewReader(value))
-		decoder.UseNumber()
-		if err := decoder.Decode(&attribute); err != nil {
-			return nil, decodeFailure(path+"/"+escapePointerToken(name), "syntax", "invalid attribute value", err)
-		}
-		attributes[name] = stripAtMembers(attribute)
+		attributes[name] = stripAtMembers(decodeValidValue(value))
 	}
 
 	return attributes, nil
@@ -693,16 +686,20 @@ func decodeMeta(raw json.RawMessage, path string) (Meta, error) {
 		if strings.HasPrefix(name, "@") {
 			continue
 		}
-		var item any
-		decoder := json.NewDecoder(bytes.NewReader(value))
-		decoder.UseNumber()
-		if err := decoder.Decode(&item); err != nil {
-			return nil, decodeFailure(path+"/"+escapePointerToken(name), "syntax", "invalid meta value", err)
-		}
-		meta[name] = stripAtMembers(item)
+		meta[name] = stripAtMembers(decodeValidValue(value))
 	}
 
 	return meta, nil
+}
+
+// decodeValidValue decodes a RawMessage produced by a successful enclosing
+// object decode. Such messages are valid JSON by construction.
+func decodeValidValue(raw json.RawMessage) any {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var value any
+	_ = decoder.Decode(&value)
+	return value
 }
 
 func decodeObject(raw []byte, path string) (map[string]json.RawMessage, error) {

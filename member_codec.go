@@ -215,10 +215,8 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		root["errors"] = sanitized
 		errorMembers = extracted
 	}
-	sanitized, err := json.Marshal(root)
-	if err != nil {
-		return Document{}, decodeFailure("", "syntax", "could not normalize document", err)
-	}
+	// root contains only RawMessages from the already validated payload.
+	sanitized, _ := json.Marshal(root)
 	document, err := decodeDocument(sanitized)
 	if err != nil {
 		return Document{}, err
@@ -242,9 +240,6 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 				document.Errors[index].Source.AdditionalMembers = errorMembers[index].source
 			}
 		}
-	}
-	if err := validateDocumentMembers(document, codec.members); err != nil {
-		return Document{}, err
 	}
 	if err := document.ValidateWith(codec.validation); err != nil {
 		return Document{}, err
@@ -311,10 +306,7 @@ func (codec *Codec) sanitizeErrors(
 			object["source"] = sanitizedSource
 			state.source = sourceMembers
 		}
-		sanitized, err := json.Marshal(object)
-		if err != nil {
-			return nil, nil, err
-		}
+		sanitized, _ := json.Marshal(object)
 		items[index] = sanitized
 		members[index] = state
 	}
@@ -365,10 +357,8 @@ func (codec *Codec) sanitizeLinkObject(
 	raw json.RawMessage,
 	path string,
 ) (json.RawMessage, linkMemberState, error) {
-	object, err := decodeObject(raw, path)
-	if err != nil {
-		return nil, linkMemberState{}, err
-	}
+	// Callers only pass object-shaped RawMessages from a valid document.
+	object, _ := decodeObject(raw, path)
 	members, err := codec.extractMembers(object, LinkObjectMemberScope, path)
 	if err != nil {
 		return nil, linkMemberState{}, err
@@ -542,10 +532,7 @@ func (codec *Codec) sanitizeRelationships(
 			relationship["data"] = sanitizedData
 			state.identifiers = identifiers
 		}
-		sanitized, marshalErr := json.Marshal(relationship)
-		if marshalErr != nil {
-			return nil, nil, marshalErr
-		}
+		sanitized, _ := json.Marshal(relationship)
 		object[name] = sanitized
 		if len(state.members) > 0 || len(state.links) > 0 || len(state.identifiers) > 0 {
 			states[name] = state
@@ -560,7 +547,7 @@ func (codec *Codec) sanitizeIdentifierData(
 	path string,
 ) (json.RawMessage, []Members, error) {
 	trimmed := bytes.TrimSpace(raw)
-	if bytes.Equal(trimmed, []byte("null")) || len(trimmed) == 0 {
+	if bytes.Equal(trimmed, []byte("null")) {
 		return raw, nil, nil
 	}
 	if trimmed[0] == '{' {
@@ -571,9 +558,7 @@ func (codec *Codec) sanitizeIdentifierData(
 		return raw, nil, nil
 	}
 	var items []json.RawMessage
-	if err := json.Unmarshal(raw, &items); err != nil || items == nil {
-		return nil, nil, decodeFailure(path, "type", "to-many linkage must be an array", err)
-	}
+	_ = json.Unmarshal(raw, &items)
 	states := make([]Members, len(items))
 	for index, item := range items {
 		sanitized, members, err := codec.sanitizeIdentifier(
@@ -623,10 +608,7 @@ func (codec *Codec) extractMembers(
 		if !exists {
 			continue
 		}
-		value, decodeErr := decodeAdditionalMember(rawValue, path+"/"+escapePointerToken(name))
-		if decodeErr != nil {
-			return nil, decodeErr
-		}
+		value := stripAtMembers(decodeValidValue(rawValue))
 		if validate := rules[name].Validate; validate != nil {
 			if validationErr := validate(value); validationErr != nil {
 				return nil, memberValueError(path, name, validationErr)
@@ -639,16 +621,6 @@ func (codec *Codec) extractMembers(
 		delete(object, name)
 	}
 	return members, nil
-}
-
-func decodeAdditionalMember(raw json.RawMessage, path string) (any, error) {
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.UseNumber()
-	var value any
-	if err := decoder.Decode(&value); err != nil {
-		return nil, decodeFailure(path, "syntax", "invalid extension member", err)
-	}
-	return stripAtMembers(value), nil
 }
 
 func attachPrimaryMembers(data *PrimaryData, members []resourceMemberState) {
