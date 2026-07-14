@@ -95,6 +95,42 @@ func TestExecuteAtomicRejectsMissingBeginner(t *testing.T) {
 	}
 }
 
+func TestExecuteAtomicReportsBeginFailures(t *testing.T) {
+	t.Parallel()
+
+	document := AtomicDocument{Operations: []AtomicOperation{{
+		Op: AtomicRemove, Href: "/articles/1",
+	}}}
+	beginFailure := errors.New("database unavailable")
+	tests := []struct {
+		beginner AtomicTransactionBeginner
+		cause    error
+	}{
+		{
+			beginner: atomicBeginnerFunc(func(context.Context) (AtomicTransaction, error) {
+				return nil, beginFailure
+			}),
+			cause: beginFailure,
+		},
+		{
+			beginner: atomicBeginnerFunc(func(context.Context) (AtomicTransaction, error) {
+				return nil, nil
+			}),
+		},
+	}
+	for _, test := range tests {
+		_, err := ExecuteAtomic(context.Background(), test.beginner, document)
+		var executionError *AtomicExecutionError
+		if !errors.As(err, &executionError) || executionError.Phase != "begin" ||
+			executionError.OperationIndex != -1 {
+			t.Fatalf("unexpected begin error: %T %#v", err, executionError)
+		}
+		if test.cause != nil && !errors.Is(err, test.cause) {
+			t.Fatalf("begin cause was not preserved: %v", err)
+		}
+	}
+}
+
 func TestExecuteAtomicRollsBackCommitFailure(t *testing.T) {
 	t.Parallel()
 
@@ -188,6 +224,28 @@ func TestExecuteAtomicStopsAndRollsBackOnCancellation(t *testing.T) {
 	}
 	if transaction.rollbackContextError != nil {
 		t.Fatalf("rollback received canceled context: %v", transaction.rollbackContextError)
+	}
+}
+
+func TestExecuteAtomicChecksCancellationBeforeCommit(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	transaction := &recordingAtomicTransaction{cancelAt: 0, cancel: cancel}
+	beginner := atomicBeginnerFunc(func(context.Context) (AtomicTransaction, error) {
+		return transaction, nil
+	})
+	document := AtomicDocument{Operations: []AtomicOperation{{
+		Op: AtomicRemove, Href: "/articles/1",
+	}}}
+	_, err := ExecuteAtomic(ctx, beginner, document)
+	var executionError *AtomicExecutionError
+	if !errors.As(err, &executionError) || executionError.Phase != "commit" ||
+		executionError.OperationIndex != -1 || !errors.Is(err, context.Canceled) {
+		t.Fatalf("unexpected pre-commit cancellation: %T %#v", err, executionError)
+	}
+	if transaction.rollbackCalls != 1 || transaction.committed {
+		t.Fatalf("unexpected transaction state: %#v", transaction)
 	}
 }
 

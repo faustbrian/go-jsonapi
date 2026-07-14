@@ -56,6 +56,27 @@ func TestAtomicCodecPreservesEmptyResults(t *testing.T) {
 	}
 }
 
+func TestAtomicCodecRoundTripsResultDataAndDocumentLinks(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"jsonapi":{"version":"1.1","ext":["https://jsonapi.org/ext/atomic"]},"links":{"self":"/operations/1"},"atomic:results":[{"data":{"type":"articles","id":"1"},"meta":{"created":true}}],"meta":{"requestId":"abc"}}`)
+	document, err := UnmarshalAtomic(payload)
+	if err != nil {
+		t.Fatalf("decode Atomic result document: %v", err)
+	}
+	if len(document.Results) != 1 || document.Results[0].Data == nil ||
+		document.Results[0].Data.one == nil || document.Results[0].Data.one.ID != "1" {
+		t.Fatalf("result data was not preserved: %#v", document.Results)
+	}
+	encoded, err := MarshalAtomic(document)
+	if err != nil {
+		t.Fatalf("encode Atomic result document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
 func TestUnmarshalAtomicRejectsForbiddenAndUnknownMembers(t *testing.T) {
 	t.Parallel()
 
