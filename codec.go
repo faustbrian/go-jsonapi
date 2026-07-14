@@ -39,10 +39,10 @@ func Marshal(document Document) ([]byte, error) {
 // MarshalWith validates in the supplied protocol context and deterministically
 // encodes a JSON:API document.
 func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
-	if err := document.ValidateWith(options); err != nil {
+	if err := validateDocumentMembers(document, nil); err != nil {
 		return nil, err
 	}
-	if err := validateDocumentMembers(document, nil); err != nil {
+	if err := document.ValidateWith(options); err != nil {
 		return nil, err
 	}
 

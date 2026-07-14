@@ -15,12 +15,13 @@ type Meta map[string]any
 // Data is a pointer so callers can distinguish an absent data member from a
 // data member whose value is null.
 type Document struct {
-	JSONAPI  *JSONAPI         `json:"jsonapi,omitempty"`
-	Links    Links            `json:"links,omitempty"`
-	Data     *PrimaryData     `json:"data,omitempty"`
-	Included []ResourceObject `json:"included,omitempty"`
-	Errors   []ErrorObject    `json:"errors,omitempty"`
-	Meta     Meta             `json:"meta,omitempty"`
+	JSONAPI           *JSONAPI         `json:"jsonapi,omitempty"`
+	Links             Links            `json:"links,omitempty"`
+	Data              *PrimaryData     `json:"data,omitempty"`
+	Included          []ResourceObject `json:"included,omitempty"`
+	Errors            []ErrorObject    `json:"errors,omitempty"`
+	Meta              Meta             `json:"meta,omitempty"`
+	AdditionalMembers Members          `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -43,7 +44,7 @@ func (document Document) MarshalJSON() ([]byte, error) {
 		meta = &document.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		JSONAPI  *JSONAPI          `json:"jsonapi,omitempty"`
 		Links    *Links            `json:"links,omitempty"`
 		Data     *PrimaryData      `json:"data,omitempty"`
@@ -57,7 +58,9 @@ func (document Document) MarshalJSON() ([]byte, error) {
 		Included: included,
 		Errors:   errorsMember,
 		Meta:     meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, document.AdditionalMembers)
 }
 
 // JSONAPI describes the JSON:API implementation and applied extensions and

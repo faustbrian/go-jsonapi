@@ -17,7 +17,8 @@ type Members map[string]any
 type MemberScope uint8
 
 const (
-	ResourceMemberScope MemberScope = iota + 1
+	TopLevelMemberScope MemberScope = iota + 1
+	ResourceMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -73,7 +74,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 		}
 		seenNamespaces[extension.Namespace] = struct{}{}
 		for _, definition := range extension.Members {
-			if definition.Scope != ResourceMemberScope {
+			if definition.Scope != TopLevelMemberScope &&
+				definition.Scope != ResourceMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -100,10 +102,12 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 
 // Marshal validates and deterministically encodes a registered document.
 func (codec *Codec) Marshal(document Document) ([]byte, error) {
-	if err := document.ValidateWith(codec.validation); err != nil {
+	if err := validateDocumentMembers(document, codec.members); err != nil {
 		return nil, err
 	}
-	if err := validateDocumentMembers(document, codec.members); err != nil {
+	validation := codec.validation
+	validation.extensionTopLevelPresent = len(document.AdditionalMembers) > 0
+	if err := document.ValidateWith(validation); err != nil {
 		return nil, err
 	}
 
@@ -120,6 +124,10 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		return Document{}, err
 	}
 	root, err := decodeObject(payload, "")
+	if err != nil {
+		return Document{}, err
+	}
+	topMembers, err := codec.extractMembers(root, TopLevelMemberScope, "")
 	if err != nil {
 		return Document{}, err
 	}
@@ -146,10 +154,13 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err != nil {
 		return Document{}, decodeFailure("", "syntax", "could not normalize document", err)
 	}
-	document, err := UnmarshalWith(sanitized, codec.validation)
+	validation := codec.validation
+	validation.extensionTopLevelPresent = len(topMembers) > 0
+	document, err := UnmarshalWith(sanitized, validation)
 	if err != nil {
 		return Document{}, err
 	}
+	document.AdditionalMembers = topMembers
 	attachPrimaryMembers(document.Data, primaryMembers)
 	for index := range document.Included {
 		if index < len(includedMembers) {
@@ -207,7 +218,20 @@ func (codec *Codec) sanitizeResource(
 	if err != nil {
 		return nil, nil, err
 	}
-	rules := codec.members[ResourceMemberScope]
+	members, err := codec.extractMembers(object, ResourceMemberScope, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, members, err
+}
+
+func (codec *Codec) extractMembers(
+	object map[string]json.RawMessage,
+	scope MemberScope,
+	path string,
+) (Members, error) {
+	rules := codec.members[scope]
 	names := make([]string, 0, len(rules))
 	for name := range rules {
 		names = append(names, name)
@@ -221,11 +245,11 @@ func (codec *Codec) sanitizeResource(
 		}
 		value, decodeErr := decodeAdditionalMember(rawValue, path+"/"+escapePointerToken(name))
 		if decodeErr != nil {
-			return nil, nil, decodeErr
+			return nil, decodeErr
 		}
 		if validate := rules[name].Validate; validate != nil {
 			if validationErr := validate(value); validationErr != nil {
-				return nil, nil, memberValueError(path, name, validationErr)
+				return nil, memberValueError(path, name, validationErr)
 			}
 		}
 		if members == nil {
@@ -234,8 +258,7 @@ func (codec *Codec) sanitizeResource(
 		members[name] = value
 		delete(object, name)
 	}
-	sanitized, err := json.Marshal(object)
-	return sanitized, members, err
+	return members, nil
 }
 
 func decodeAdditionalMember(raw json.RawMessage, path string) (any, error) {
@@ -269,6 +292,25 @@ func validateDocumentMembers(
 	registry map[MemberScope]map[string]MemberDefinition,
 ) error {
 	validator := documentValidator{}
+	for name, value := range document.AdditionalMembers {
+		definition, exists := registry[TopLevelMemberScope][name]
+		if !exists {
+			validator.add(
+				"/"+escapePointerToken(name),
+				"unregistered-member",
+				"member is not registered for this object scope",
+			)
+			continue
+		}
+		if definition.Validate != nil {
+			if err := definition.Validate(value); err != nil {
+				validator.violations = append(
+					validator.violations,
+					memberValueViolation("", name, err),
+				)
+			}
+		}
+	}
 	for _, observation := range documentResources(document) {
 		for name, value := range observation.resource.AdditionalMembers {
 			definition, exists := registry[ResourceMemberScope][name]
@@ -329,16 +371,20 @@ func marshalObjectWithMembers(core any, members Members) ([]byte, error) {
 	sort.Strings(names)
 	buffer := bytes.NewBuffer(make([]byte, 0, len(payload)+len(names)*16))
 	buffer.Write(payload[:len(payload)-1])
+	hasMembers := len(existing) > 0
 	for _, name := range names {
 		nameJSON, _ := json.Marshal(name)
 		valueJSON, err := json.Marshal(members[name])
 		if err != nil {
 			return nil, err
 		}
-		buffer.WriteByte(',')
+		if hasMembers {
+			buffer.WriteByte(',')
+		}
 		buffer.Write(nameJSON)
 		buffer.WriteByte(':')
 		buffer.Write(valueJSON)
+		hasMembers = true
 	}
 	buffer.WriteByte('}')
 	return buffer.Bytes(), nil

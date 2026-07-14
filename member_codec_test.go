@@ -166,3 +166,56 @@ func TestCodecRejectsUnregisteredApplicationMemberOnMarshal(t *testing.T) {
 		t.Fatalf("unexpected violations: %#v", validationError.Violations)
 	}
 }
+
+func TestCodecRoundTripsTopLevelExtensionMemberAsSemanticContent(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: TopLevelMemberScope,
+			Name:  "version:manifest",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"version:manifest":{"revision":42}}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode top-level extension document: %v", err)
+	}
+	manifest, ok := document.AdditionalMembers["version:manifest"].(map[string]any)
+	if !ok || manifest["revision"] == nil {
+		t.Fatalf("top-level member was not preserved: %#v", document.AdditionalMembers)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode top-level extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsTopLevelExtensionMemberAsSemanticContent(t *testing.T) {
+	t.Parallel()
+
+	_, err := Unmarshal([]byte(`{"version:manifest":{"revision":42}}`))
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) || decodeError.Path != "/version:manifest" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{
+		AdditionalMembers: Members{"version:manifest": map[string]any{"revision": 42}},
+	})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(validationError, "/version:manifest", "unregistered-member") {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
