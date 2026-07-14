@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Verify and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Validate release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/check-release-metadata.sh "$GITHUB_REF_NAME"
+      - name: Verify source
+        run: |
+          test -z "$(gofmt -l .)"
+          go mod tidy -diff
+          go vet ./...
+          go test ./... -race
+          ./scripts/check-coverage.sh
+          ./scripts/check-docs.sh
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12
+      - name: Security scan
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - name: Build reproducible source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir dist
+          git archive \
+            --format=tar.gz \
+            --prefix="go-jsonapi-${version}/" \
+            --output="dist/go-jsonapi-${version}.tar.gz" \
+            "$GITHUB_REF_NAME"
+          cd dist
+          sha256sum "go-jsonapi-${version}.tar.gz" > SHA256SUMS
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          dist/go-jsonapi-*.tar.gz
+          dist/SHA256SUMS
+          --verify-tag
+          --generate-notes
+          --title "$GITHUB_REF_NAME"
