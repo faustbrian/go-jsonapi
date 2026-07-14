@@ -63,6 +63,16 @@ func TestCheckContentType(t *testing.T) {
 			status:    415,
 			errorCode: "invalid-parameter",
 		},
+		"empty extension list": {
+			header:    `application/vnd.api+json;ext=""`,
+			status:    415,
+			errorCode: "invalid-parameter",
+		},
+		"invalid profile URI": {
+			header:    `application/vnd.api+json;profile="relative"`,
+			status:    415,
+			errorCode: "invalid-parameter",
+		},
 	}
 
 	for name, test := range tests {
@@ -132,6 +142,26 @@ func TestNegotiateAccept(t *testing.T) {
 			header:      "application/vnd.api+json;charset=utf-8, application/vnd.api+json",
 			contentType: MediaTypeJSONAPI,
 		},
+		"malformed candidate is ignored when base is available": {
+			header:      ";, application/vnd.api+json",
+			contentType: MediaTypeJSONAPI,
+		},
+		"invalid quality is ignored when base is available": {
+			header:      "application/vnd.api+json;q=invalid, application/vnd.api+json;q=0.5",
+			contentType: MediaTypeJSONAPI,
+		},
+		"out of range quality is ignored when base is available": {
+			header:      "application/vnd.api+json;q=2, application/vnd.api+json;q=0.5",
+			contentType: MediaTypeJSONAPI,
+		},
+		"parameterized wildcard is ignored when base is available": {
+			header:      "*/*;charset=utf-8, application/vnd.api+json",
+			contentType: MediaTypeJSONAPI,
+		},
+		"invalid profile candidate is ignored when base is available": {
+			header:      `application/vnd.api+json;profile="relative", application/vnd.api+json`,
+			contentType: MediaTypeJSONAPI,
+		},
 		"unsupported extension candidate is ignored when base is available": {
 			header:      `application/vnd.api+json;ext="https://example.com/unsupported", application/vnd.api+json;q=0.5`,
 			contentType: MediaTypeJSONAPI,
@@ -186,6 +216,41 @@ func TestNewNegotiatorRejectsInvalidConfiguration(t *testing.T) {
 	_, err := NewNegotiator([]string{"not-a-uri"}, nil)
 	if err == nil {
 		t.Fatal("expected configuration error")
+	}
+	_, err = NewNegotiator(nil, []string{"relative"})
+	if err == nil {
+		t.Fatal("expected invalid profile configuration error")
+	}
+	_, err = NewNegotiator([]string{atomicExtension, atomicExtension}, nil)
+	if err == nil {
+		t.Fatal("expected duplicate extension configuration error")
+	}
+	_, err = NewNegotiator(nil, []string{cursorProfile, cursorProfile})
+	if err == nil {
+		t.Fatal("expected duplicate profile configuration error")
+	}
+}
+
+func TestNegotiationHeaderUtilities(t *testing.T) {
+	t.Parallel()
+
+	mediaType := MediaType{
+		Extensions: []string{"https://example.com/z", "https://example.com/a", "https://example.com/z"},
+		Profiles:   []string{"https://example.com/profile", "https://example.com/profile"},
+	}
+	want := `application/vnd.api+json; ext="https://example.com/a https://example.com/z"; profile="https://example.com/profile"`
+	if got := mediaType.String(); got != want {
+		t.Fatalf("unexpected canonical media type: got %q, want %q", got, want)
+	}
+
+	header := `application/vnd.api+json;profile="https://example.com/a,b", application/vnd.api+json`
+	values := splitHeaderValues(header)
+	if len(values) != 2 || values[0] != `application/vnd.api+json;profile="https://example.com/a,b"` {
+		t.Fatalf("quoted comma was split: %#v", values)
+	}
+	escaped := splitHeaderValues(`application/vnd.api+json;profile="https://example.com/a\"b,c", text/plain`)
+	if len(escaped) != 2 {
+		t.Fatalf("escaped quote changed header splitting: %#v", escaped)
 	}
 }
 
