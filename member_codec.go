@@ -23,6 +23,7 @@ const (
 	IdentifierMemberScope
 	JSONAPIMemberScope
 	ErrorMemberScope
+	ErrorSourceMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -83,7 +84,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 				definition.Scope != RelationshipMemberScope &&
 				definition.Scope != IdentifierMemberScope &&
 				definition.Scope != JSONAPIMemberScope &&
-				definition.Scope != ErrorMemberScope {
+				definition.Scope != ErrorMemberScope &&
+				definition.Scope != ErrorSourceMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -169,7 +171,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		root["included"] = sanitized
 		includedMembers = extracted
 	}
-	var errorMembers []Members
+	var errorMembers []errorMemberState
 	if raw, exists := root["errors"]; exists {
 		sanitized, extracted, sanitizeErr := codec.sanitizeErrors(raw, "/errors")
 		if sanitizeErr != nil {
@@ -198,7 +200,10 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	}
 	for index := range document.Errors {
 		if index < len(errorMembers) {
-			document.Errors[index].AdditionalMembers = errorMembers[index]
+			document.Errors[index].AdditionalMembers = errorMembers[index].members
+			if document.Errors[index].Source != nil {
+				document.Errors[index].Source.AdditionalMembers = errorMembers[index].source
+			}
 		}
 	}
 	if err := validateDocumentMembers(document, codec.members); err != nil {
@@ -214,26 +219,49 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 func (codec *Codec) sanitizeErrors(
 	raw json.RawMessage,
 	path string,
-) (json.RawMessage, []Members, error) {
+) (json.RawMessage, []errorMemberState, error) {
 	var items []json.RawMessage
 	if err := json.Unmarshal(raw, &items); err != nil || items == nil {
 		return nil, nil, decodeFailure(path, "type", "errors must be an array", err)
 	}
-	members := make([]Members, len(items))
+	members := make([]errorMemberState, len(items))
 	for index, item := range items {
-		sanitized, extracted, err := codec.sanitizeObject(
-			item,
-			ErrorMemberScope,
-			path+"/"+fmt.Sprintf("%d", index),
-		)
+		itemPath := path + "/" + fmt.Sprintf("%d", index)
+		object, err := decodeObject(item, itemPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		extracted, err := codec.extractMembers(object, ErrorMemberScope, itemPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		state := errorMemberState{members: extracted}
+		if rawSource, exists := object["source"]; exists {
+			sanitizedSource, sourceMembers, sanitizeErr := codec.sanitizeObject(
+				rawSource,
+				ErrorSourceMemberScope,
+				itemPath+"/source",
+			)
+			if sanitizeErr != nil {
+				return nil, nil, sanitizeErr
+			}
+			object["source"] = sanitizedSource
+			state.source = sourceMembers
+		}
+		sanitized, err := json.Marshal(object)
 		if err != nil {
 			return nil, nil, err
 		}
 		items[index] = sanitized
-		members[index] = extracted
+		members[index] = state
 	}
 	sanitized, err := json.Marshal(items)
 	return sanitized, members, err
+}
+
+type errorMemberState struct {
+	members Members
+	source  Members
 }
 
 func (codec *Codec) sanitizeObject(
@@ -539,12 +567,21 @@ func validateDocumentMembers(
 		)
 	}
 	for index, apiError := range document.Errors {
+		path := "/errors/" + fmt.Sprintf("%d", index)
 		validateScopedMembers(
 			&validator,
 			apiError.AdditionalMembers,
 			registry[ErrorMemberScope],
-			"/errors/"+fmt.Sprintf("%d", index),
+			path,
 		)
+		if apiError.Source != nil {
+			validateScopedMembers(
+				&validator,
+				apiError.Source.AdditionalMembers,
+				registry[ErrorSourceMemberScope],
+				path+"/source",
+			)
+		}
 	}
 	for _, observation := range documentResources(document) {
 		for name, value := range observation.resource.AdditionalMembers {

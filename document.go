@@ -493,7 +493,23 @@ func (apiError ErrorObject) MarshalJSON() ([]byte, error) {
 
 // ErrorSource identifies the source of an error in a request.
 type ErrorSource struct {
-	Pointer   string `json:"pointer,omitempty"`
-	Parameter string `json:"parameter,omitempty"`
-	Header    string `json:"header,omitempty"`
+	Pointer           string  `json:"pointer,omitempty"`
+	Parameter         string  `json:"parameter,omitempty"`
+	Header            string  `json:"header,omitempty"`
+	AdditionalMembers Members `json:"-"`
+}
+
+// MarshalJSON implements json.Marshaler for registered extension members.
+func (source ErrorSource) MarshalJSON() ([]byte, error) {
+	core := struct {
+		Pointer   string `json:"pointer,omitempty"`
+		Parameter string `json:"parameter,omitempty"`
+		Header    string `json:"header,omitempty"`
+	}{
+		Pointer:   source.Pointer,
+		Parameter: source.Parameter,
+		Header:    source.Header,
+	}
+
+	return marshalObjectWithMembers(core, source.AdditionalMembers)
 }

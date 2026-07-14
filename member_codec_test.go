@@ -540,3 +540,63 @@ func TestCoreCodecRejectsErrorObjectExtensionMember(t *testing.T) {
 		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
 	}
 }
+
+func TestCodecRoundTripsErrorSourceExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: ErrorSourceMemberScope,
+			Name:  "version:input",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"errors":[{"source":{"pointer":"/data","version:input":"body"}}]}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode error source extension document: %v", err)
+	}
+	if len(document.Errors) != 1 || document.Errors[0].Source == nil ||
+		document.Errors[0].Source.AdditionalMembers["version:input"] != "body" {
+		t.Fatalf("error source member was not preserved: %#v", document.Errors)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode error source extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsErrorSourceExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"errors":[{"source":{"pointer":"/data","version:input":"body"}}]}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/errors/0/source/version:input" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{Errors: []ErrorObject{{Source: &ErrorSource{
+		Pointer:           "/data",
+		AdditionalMembers: Members{"version:input": "body"},
+	}}}})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/errors/0/source/version:input",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
