@@ -185,3 +185,84 @@ func TestCursorPaginationPreservesEmptyCursorPresence(t *testing.T) {
 		t.Fatalf("cursor presence was lost: %#v", page)
 	}
 }
+
+func TestCursorPaginationErrorBuildsProfileErrorObject(t *testing.T) {
+	t.Parallel()
+
+	pagination, err := NewCursorPagination(CursorPaginationConfig{
+		DefaultSize: 10,
+		MaxSize:     50,
+	})
+	if err != nil {
+		t.Fatalf("construct pagination parser: %v", err)
+	}
+	_, err = pagination.Parse(ParameterFamily{"page[size]": {"51"}})
+	var pageError *CursorPaginationError
+	if !errors.As(err, &pageError) {
+		t.Fatalf("expected CursorPaginationError, got %T: %v", err, err)
+	}
+
+	object := pageError.ErrorObject("Page size too large", "The maximum is 50.")
+	document := Document{Errors: []ErrorObject{object}}
+	payload, err := Marshal(document)
+	if err != nil {
+		t.Fatalf("marshal error document: %v", err)
+	}
+	want := `{"errors":[{"links":{"type":"https://jsonapi.org/profiles/ethanresnick/cursor-pagination/max-size-exceeded"},"status":"400","code":"max-size-exceeded","title":"Page size too large","detail":"The maximum is 50.","source":{"parameter":"page[size]"},"meta":{"page":{"maxSize":50}}}]}`
+	if string(payload) != want {
+		t.Fatalf("unexpected error document:\n got: %s\nwant: %s", payload, want)
+	}
+}
+
+func TestValidateCursorPaginationLinks(t *testing.T) {
+	t.Parallel()
+
+	if err := ValidateCursorPaginationLinks(Links{
+		"prev": NullLink(),
+		"next": URI("/articles?page[after]=abc"),
+	}); err != nil {
+		t.Fatalf("expected required pagination links: %v", err)
+	}
+
+	tests := []struct {
+		links Links
+		path  string
+	}{
+		{links: Links{"next": NullLink()}, path: "/links/prev"},
+		{links: Links{"prev": NullLink()}, path: "/links/next"},
+	}
+	for _, test := range tests {
+		err := ValidateCursorPaginationLinks(test.links)
+		var validationError *ValidationError
+		if !errors.As(err, &validationError) {
+			t.Fatalf("expected ValidationError, got %T: %v", err, err)
+		}
+		if validationError.Violations[0].Path != test.path {
+			t.Fatalf("unexpected violation: %#v", validationError.Violations[0])
+		}
+	}
+}
+
+func TestCursorProfileErrorTypeLinks(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]string{
+		"unsupported-sort":    CursorUnsupportedSortTypeURI,
+		"range-not-supported": CursorRangeNotSupportedTypeURI,
+	}
+	for code, typeURI := range tests {
+		object := (&CursorPaginationError{
+			Status:    400,
+			Parameter: "sort",
+			Code:      code,
+			Message:   code,
+		}).ErrorObject(code, code)
+		payload, err := object.Links["type"].MarshalJSON()
+		if err != nil {
+			t.Fatalf("marshal type link: %v", err)
+		}
+		if string(payload) != `"`+typeURI+`"` {
+			t.Fatalf("unexpected type link for %s: %s", code, payload)
+		}
+	}
+}

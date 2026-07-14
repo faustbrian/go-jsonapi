@@ -10,6 +10,12 @@ import (
 // profile. The profile normatively uses this HTTP URI.
 const CursorPaginationProfileURI = "http://jsonapi.org/profiles/ethanresnick/cursor-pagination/"
 
+const (
+	CursorUnsupportedSortTypeURI   = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/unsupported-sort"
+	CursorMaxSizeExceededTypeURI   = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/max-size-exceeded"
+	CursorRangeNotSupportedTypeURI = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/range-pagination-not-supported"
+)
+
 // CursorPaginationConfig defines endpoint-specific page sizing, range
 // support, and opaque cursor validation.
 type CursorPaginationConfig struct {
@@ -44,6 +50,51 @@ type CursorPaginationError struct {
 // Error implements error.
 func (err *CursorPaginationError) Error() string {
 	return fmt.Sprintf("invalid cursor pagination parameter %q: %s", err.Parameter, err.Message)
+}
+
+// ErrorObject converts a profile failure to a JSON:API error object with the
+// required source, type link, and profile metadata.
+func (err *CursorPaginationError) ErrorObject(title, detail string) ErrorObject {
+	object := ErrorObject{
+		Status: "400",
+		Code:   err.Code,
+		Title:  title,
+		Detail: detail,
+		Source: &ErrorSource{Parameter: err.Parameter},
+	}
+	var typeURI string
+	switch err.Code {
+	case "unsupported-sort":
+		typeURI = CursorUnsupportedSortTypeURI
+	case "max-size-exceeded":
+		typeURI = CursorMaxSizeExceededTypeURI
+		object.Meta = Meta{"page": map[string]any{"maxSize": err.MaxSize}}
+	case "range-not-supported":
+		typeURI = CursorRangeNotSupportedTypeURI
+	}
+	if typeURI != "" {
+		object.Links = Links{"type": URI(typeURI)}
+	}
+
+	return object
+}
+
+// ValidateCursorPaginationLinks enforces the profile requirement that every
+// paginated data instance contains both prev and next links.
+func ValidateCursorPaginationLinks(links Links) error {
+	validator := documentValidator{}
+	if _, exists := links["prev"]; !exists {
+		validator.add("/links/prev", "required", "cursor pagination requires a prev link")
+	}
+	if _, exists := links["next"]; !exists {
+		validator.add("/links/next", "required", "cursor pagination requires a next link")
+	}
+	validator.validateLinks(links, "/links")
+	if len(validator.violations) == 0 {
+		return nil
+	}
+
+	return &ValidationError{Violations: validator.violations}
 }
 
 // CursorPagination parses the page family for one configured endpoint.
