@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -264,5 +265,45 @@ func TestCursorProfileErrorTypeLinks(t *testing.T) {
 		if string(payload) != `"`+typeURI+`"` {
 			t.Fatalf("unexpected type link for %s: %s", code, payload)
 		}
+	}
+}
+
+func TestCursorPaginationValidatesStableSort(t *testing.T) {
+	t.Parallel()
+
+	var received []SortField
+	pagination, err := NewCursorPagination(CursorPaginationConfig{
+		DefaultSize: 10,
+		MaxSize:     50,
+		ValidateSort: func(sortFields []SortField) error {
+			received = append([]SortField(nil), sortFields...)
+			if len(sortFields) == 1 && sortFields[0].Name == "unstable" {
+				return errors.New("sort cannot produce a unique order")
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("construct pagination parser: %v", err)
+	}
+
+	query := Query{
+		Sort:        []SortField{{Name: "unstable"}},
+		SortPresent: true,
+		Page:        ParameterFamily{"page[size]": {"10"}},
+	}
+	_, err = pagination.ParseQuery(query)
+	var pageError *CursorPaginationError
+	if !errors.As(err, &pageError) || pageError.Code != "unsupported-sort" ||
+		pageError.Parameter != "sort" {
+		t.Fatalf("unexpected sort error: %T %#v", err, pageError)
+	}
+	if !reflect.DeepEqual(received, query.Sort) {
+		t.Fatalf("validator received wrong sort: %#v", received)
+	}
+
+	query.Sort = []SortField{{Name: "created", Descending: true}, {Name: "id"}}
+	if _, err := pagination.ParseQuery(query); err != nil {
+		t.Fatalf("expected stable sort: %v", err)
 	}
 }

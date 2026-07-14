@@ -23,6 +23,7 @@ type CursorPaginationConfig struct {
 	MaxSize        int
 	AllowRange     bool
 	ValidateCursor func(string) error
+	ValidateSort   func([]SortField) error
 }
 
 // CursorPageRequest is the validated cursor pagination request for an
@@ -103,6 +104,7 @@ type CursorPagination struct {
 	maxSize        int
 	allowRange     bool
 	validateCursor func(string) error
+	validateSort   func([]SortField) error
 }
 
 // NewCursorPagination validates endpoint policy before it serves requests.
@@ -127,7 +129,27 @@ func NewCursorPagination(config CursorPaginationConfig) (*CursorPagination, erro
 		maxSize:        config.MaxSize,
 		allowRange:     config.AllowRange,
 		validateCursor: config.ValidateCursor,
+		validateSort:   config.ValidateSort,
 	}, nil
+}
+
+// ParseQuery validates both the page family and the endpoint's stable sorting
+// requirement. When ValidateSort is nil, the caller remains responsible for
+// applying a unique order before fetching the page.
+func (pagination *CursorPagination) ParseQuery(query Query) (CursorPageRequest, error) {
+	request, err := pagination.Parse(query.Page)
+	if err != nil {
+		return CursorPageRequest{}, err
+	}
+	if pagination.validateSort != nil {
+		if err := pagination.validateSort(query.Sort); err != nil {
+			return CursorPageRequest{}, cursorFailure(
+				"sort", "unsupported-sort", err.Error(), 0,
+			)
+		}
+	}
+
+	return request, nil
 }
 
 // Parse validates the page parameter family according to the profile and
