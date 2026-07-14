@@ -330,7 +330,9 @@ func decodeAttributes(raw json.RawMessage, path string) (Attributes, error) {
 			continue
 		}
 		var attribute any
-		if err := json.Unmarshal(value, &attribute); err != nil {
+		decoder := json.NewDecoder(bytes.NewReader(value))
+		decoder.UseNumber()
+		if err := decoder.Decode(&attribute); err != nil {
 			return nil, decodeFailure(path+"/"+escapePointerToken(name), "syntax", "invalid attribute value", err)
 		}
 		attributes[name] = stripAtMembers(attribute)

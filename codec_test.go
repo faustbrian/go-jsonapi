@@ -97,6 +97,24 @@ func TestUnmarshalPreservesNullAndEmptyData(t *testing.T) {
 	}
 }
 
+func TestUnmarshalPreservesExactAttributeNumbers(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","attributes":{"large":9007199254740993,"decimal":1.25}}}`)
+	document, err := Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode numeric attributes: %v", err)
+	}
+	encoded, err := Marshal(document)
+	if err != nil {
+		t.Fatalf("encode numeric attributes: %v", err)
+	}
+	want := `{"data":{"type":"articles","id":"1","attributes":{"decimal":1.25,"large":9007199254740993}}}`
+	if string(encoded) != want {
+		t.Fatalf("attribute numbers changed: got %s, want %s", encoded, want)
+	}
+}
+
 func TestUnmarshalIgnoresAtMembers(t *testing.T) {
 	t.Parallel()
 
