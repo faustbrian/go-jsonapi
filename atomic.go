@@ -9,8 +9,11 @@ const AtomicExtensionURI = "https://jsonapi.org/ext/atomic"
 type AtomicOperationCode string
 
 const (
-	AtomicAdd    AtomicOperationCode = "add"
+	// AtomicAdd creates a resource or adds relationship members.
+	AtomicAdd AtomicOperationCode = "add"
+	// AtomicUpdate updates a resource or replaces relationship linkage.
 	AtomicUpdate AtomicOperationCode = "update"
+	// AtomicRemove removes a resource or relationship members.
 	AtomicRemove AtomicOperationCode = "remove"
 )
 
@@ -18,8 +21,11 @@ const (
 type AtomicValidationContext uint8
 
 const (
+	// AtomicGenericContext applies context-independent Atomic document rules.
 	AtomicGenericContext AtomicValidationContext = iota
+	// AtomicRequestContext requires an operations request document.
 	AtomicRequestContext
+	// AtomicResponseContext requires a valid results or errors response.
 	AtomicResponseContext
 )
 
@@ -90,6 +96,7 @@ func (document AtomicDocument) ValidateWith(options AtomicValidationOptions) err
 		validator.add("/errors", "conflict", "atomic members and errors must not coexist")
 	}
 	switch options.Context {
+	case AtomicGenericContext:
 	case AtomicRequestContext:
 		if document.Operations == nil {
 			validator.add("/atomic:operations", "required", "atomic request requires operations")

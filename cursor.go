@@ -11,8 +11,11 @@ import (
 const CursorPaginationProfileURI = "http://jsonapi.org/profiles/ethanresnick/cursor-pagination/"
 
 const (
-	CursorUnsupportedSortTypeURI   = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/unsupported-sort"
-	CursorMaxSizeExceededTypeURI   = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/max-size-exceeded"
+	// CursorUnsupportedSortTypeURI identifies an unsupported sort error.
+	CursorUnsupportedSortTypeURI = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/unsupported-sort"
+	// CursorMaxSizeExceededTypeURI identifies a maximum page size error.
+	CursorMaxSizeExceededTypeURI = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/max-size-exceeded"
+	// CursorRangeNotSupportedTypeURI identifies a rejected range request.
 	CursorRangeNotSupportedTypeURI = "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/range-pagination-not-supported"
 )
 

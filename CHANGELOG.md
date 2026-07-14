@@ -25,6 +25,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and representative benchmarks.
 - Project documentation, conformance matrices, adoption guidance, and
   contribution and security policies.
+- GitHub Actions quality, compatibility, fuzzing, security, benchmark,
+  documentation, and tagged-release automation.
 
 ### Fixed
 

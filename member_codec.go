@@ -17,13 +17,21 @@ type Members map[string]any
 type MemberScope uint8
 
 const (
+	// TopLevelMemberScope registers a top-level document member.
 	TopLevelMemberScope MemberScope = iota + 1
+	// ResourceMemberScope registers a resource object member.
 	ResourceMemberScope
+	// RelationshipMemberScope registers a relationship object member.
 	RelationshipMemberScope
+	// IdentifierMemberScope registers a resource identifier member.
 	IdentifierMemberScope
+	// JSONAPIMemberScope registers a JSON:API object member.
 	JSONAPIMemberScope
+	// ErrorMemberScope registers an error object member.
 	ErrorMemberScope
+	// ErrorSourceMemberScope registers an error source object member.
 	ErrorSourceMemberScope
+	// LinkObjectMemberScope registers a link object member.
 	LinkObjectMemberScope
 )
 

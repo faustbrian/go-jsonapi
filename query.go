@@ -295,9 +295,9 @@ func validExtensionNamespace(namespace string) bool {
 		return false
 	}
 	for _, character := range namespace {
-		if !(character >= 'a' && character <= 'z') &&
-			!(character >= 'A' && character <= 'Z') &&
-			!(character >= '0' && character <= '9') {
+		if (character < 'a' || character > 'z') &&
+			(character < 'A' || character > 'Z') &&
+			(character < '0' || character > '9') {
 			return false
 		}
 	}

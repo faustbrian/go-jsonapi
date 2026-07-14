@@ -446,9 +446,9 @@ func validLanguageTag(tag string) bool {
 	}
 	for _, character := range tag {
 		if character != '-' &&
-			!(character >= 'a' && character <= 'z') &&
-			!(character >= 'A' && character <= 'Z') &&
-			!(character >= '0' && character <= '9') {
+			(character < 'a' || character > 'z') &&
+			(character < 'A' || character > 'Z') &&
+			(character < '0' || character > '9') {
 			return false
 		}
 	}
@@ -576,6 +576,7 @@ func documentResources(document Document) []resourceObservation {
 	var resources []resourceObservation
 	if document.Data != nil {
 		switch document.Data.kind {
+		case primaryDataNull:
 		case primaryDataOne:
 			if document.Data.one != nil {
 				resources = append(resources, resourceObservation{*document.Data.one, "/data"})
