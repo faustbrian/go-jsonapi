@@ -10,6 +10,8 @@ This package exists because the current Go JSON:API ecosystem is not strong
 enough to treat as an obvious long-term dependency for multiple high-traffic
 services. The goal is not a thin serializer helper. The goal is a real,
 maintained foundation that can become a trusted default.
+It is expected to become a full-spec open source package with no intentional
+spec divergences or compliance gaps.
 
 ## Product Position
 
@@ -20,6 +22,7 @@ maintained foundation that can become a trusted default.
 - transport-agnostic at the core
 - usable from plain `net/http`
 - suitable for production APIs with strict compatibility requirements
+- full-spec compliant
 - explicit about what parts of the spec are implemented and verified
 
 It should not assume a specific router, ORM, validator, or dependency
@@ -89,9 +92,12 @@ or depend on abandoned packages.
 
 ## Core Requirements
 
-### 1. Spec Fidelity
+### 1. Full Spec Fidelity
 
-The package must implement the full core JSON:API behavior intentionally.
+The package must implement the full JSON:API specification intentionally,
+including all behavior required to honestly present the package as spec
+compliant.
+
 Features must be documented as:
 
 - implemented
@@ -99,6 +105,7 @@ Features must be documented as:
 - planned but not yet implemented
 
 Do not leave behavior ambiguous.
+Do not ship a version advertised as compliant while known gaps remain.
 
 ### 2. Deterministic Output
 
@@ -135,6 +142,15 @@ services can:
 
 without forking the library.
 
+### 6. No Spec Divergences
+
+The package must not intentionally diverge from JSON:API because a divergent
+behavior is more convenient for one application.
+
+If an application needs a project-specific behavior, it must live behind an
+explicit extension seam and must not be misrepresented as standard JSON:API
+behavior.
+
 ## First-Version Deliverables
 
 ### Package Surface
@@ -160,6 +176,7 @@ The repository should include:
 - round-trip tests
 - spec behavior coverage matrix
 - benchmark suite for representative documents
+- explicit proof that every required spec behavior is covered
 
 ### Documentation
 
@@ -169,6 +186,7 @@ The repository must ship with:
 - quickstart
 - architecture overview
 - supported-features matrix
+- conformance matrix
 - extension guide
 - migration notes
 - compatibility policy
@@ -194,9 +212,10 @@ Testing must include:
 - regression tests for every discovered edge case
 - fuzzing for parsing and decoding surfaces
 - benchmarks for common response shapes
+- clear coverage for every required spec rule
 
-The package should not claim full-spec support until the behavior matrix proves
-it.
+The package should not claim full-spec support until the conformance matrix
+proves it.
 
 ## Versioning And Compatibility
 
@@ -253,7 +272,7 @@ That means:
 
 This goal is achieved when:
 
-- the package can honestly claim production-grade JSON:API core support
+- the package can honestly claim full JSON:API spec compliance
 - the public API is stable enough for real service adoption
 - conformance coverage is documented and verified
 - performance is reasonable for high-traffic APIs
@@ -264,4 +283,5 @@ This goal is achieved when:
 - Do not let this become an endless framework design exercise.
 - Do not add speculative app-specific convenience layers too early.
 - Do not claim “full JSON:API support” without a concrete support matrix.
+- Do not ship intentional spec deviations disguised as extensions.
 - Do not start with extensions before the core spec is solid.
