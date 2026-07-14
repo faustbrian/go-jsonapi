@@ -180,3 +180,23 @@ func TestMarshalRejectsInvalidDocument(t *testing.T) {
 		t.Fatalf("expected ValidationError, got %T: %v", err, err)
 	}
 }
+
+func TestUnmarshalReportsErrorSourceFieldsDeterministically(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"errors":[{"source":{
+		"pointer":1,
+		"parameter":2,
+		"header":3
+	}}]}`)
+	for range 100 {
+		_, err := Unmarshal(payload)
+		var decodeError *DecodeError
+		if !errors.As(err, &decodeError) {
+			t.Fatalf("expected DecodeError, got %T: %v", err, err)
+		}
+		if decodeError.Path != "/errors/0/source/pointer" {
+			t.Fatalf("unexpected first error source path: %q", decodeError.Path)
+		}
+	}
+}

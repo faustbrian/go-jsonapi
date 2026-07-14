@@ -650,13 +650,18 @@ func decodeErrorSource(raw json.RawMessage, path string) (ErrorSource, error) {
 	}
 
 	var result ErrorSource
-	for name, target := range map[string]*string{
-		"pointer":   &result.Pointer,
-		"parameter": &result.Parameter,
-		"header":    &result.Header,
-	} {
+	fields := []struct {
+		name   string
+		target *string
+	}{
+		{"pointer", &result.Pointer},
+		{"parameter", &result.Parameter},
+		{"header", &result.Header},
+	}
+	for _, field := range fields {
+		name := field.name
 		if value, exists := object[name]; exists {
-			if err := decodeString(value, path+"/"+name, target); err != nil {
+			if err := decodeString(value, path+"/"+name, field.target); err != nil {
 				return ErrorSource{}, err
 			}
 		}
