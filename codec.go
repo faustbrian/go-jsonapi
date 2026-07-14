@@ -33,7 +33,13 @@ func (err *DecodeError) Unwrap() error {
 
 // Marshal validates and deterministically encodes a JSON:API document.
 func Marshal(document Document) ([]byte, error) {
-	if err := document.Validate(); err != nil {
+	return MarshalWith(document, ValidationOptions{})
+}
+
+// MarshalWith validates in the supplied protocol context and deterministically
+// encodes a JSON:API document.
+func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
+	if err := document.ValidateWith(options); err != nil {
 		return nil, err
 	}
 
@@ -42,6 +48,12 @@ func Marshal(document Document) ([]byte, error) {
 
 // Unmarshal strictly decodes and validates a JSON:API document.
 func Unmarshal(payload []byte) (Document, error) {
+	return UnmarshalWith(payload, ValidationOptions{})
+}
+
+// UnmarshalWith strictly decodes and validates a JSON:API document in the
+// supplied protocol context.
+func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) {
 	if !json.Valid(payload) {
 		return Document{}, decodeFailure("", "syntax", "invalid JSON", nil)
 	}
@@ -98,7 +110,7 @@ func Unmarshal(payload []byte) (Document, error) {
 		document.Meta = meta
 	}
 
-	if err := document.Validate(); err != nil {
+	if err := document.ValidateWith(options); err != nil {
 		return Document{}, err
 	}
 

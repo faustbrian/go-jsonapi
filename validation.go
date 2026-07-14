@@ -26,6 +26,32 @@ type ValidationError struct {
 	Violations []Violation
 }
 
+// ValidationContext identifies the protocol boundary at which a document is
+// being validated.
+type ValidationContext uint8
+
+const (
+	// GenericDocument applies context-independent JSON:API document rules.
+	GenericDocument ValidationContext = iota
+	// Response applies server response identity rules.
+	Response
+	// CreateRequest applies resource creation request rules.
+	CreateRequest
+	// UpdateRequest applies resource update request rules.
+	UpdateRequest
+	// ToOneRelationshipRequest applies to-one relationship mutation rules.
+	ToOneRelationshipRequest
+	// ToManyRelationshipRequest applies to-many relationship mutation rules.
+	ToManyRelationshipRequest
+)
+
+// ValidationOptions configures context and optional endpoint identity checks.
+type ValidationOptions struct {
+	Context      ValidationContext
+	ExpectedType string
+	ExpectedID   string
+}
+
 // Error implements error.
 func (err *ValidationError) Error() string {
 	if len(err.Violations) == 0 {
@@ -48,7 +74,13 @@ func (err *ValidationError) Error() string {
 // Validate checks the context-independent structural requirements of a
 // JSON:API document and returns all violations in document order.
 func (document Document) Validate() error {
-	validator := documentValidator{}
+	return document.ValidateWith(ValidationOptions{})
+}
+
+// ValidateWith checks a document using rules for a specific request or
+// response boundary.
+func (document Document) ValidateWith(options ValidationOptions) error {
+	validator := documentValidator{options: options}
 	validator.validateDocument(document)
 	if len(validator.violations) == 0 {
 		return nil
@@ -59,7 +91,16 @@ func (document Document) Validate() error {
 
 type documentValidator struct {
 	violations []Violation
+	options    ValidationOptions
 }
+
+type identityRequirement uint8
+
+const (
+	identityEither identityRequirement = iota
+	identityOptional
+	identityID
+)
 
 func (validator *documentValidator) validateDocument(document Document) {
 	if document.Data == nil && len(document.Errors) == 0 && document.Meta == nil {
@@ -71,16 +112,52 @@ func (validator *documentValidator) validateDocument(document Document) {
 	if document.Data == nil && document.Included != nil {
 		validator.add("/included", "requires-data", "included requires top-level data")
 	}
+	if validator.requestContext() {
+		if document.Data == nil {
+			validator.add("/data", "required", "request document must contain data")
+		}
+		if len(document.Errors) > 0 {
+			validator.add("/errors", "forbidden", "request document must not contain errors")
+		}
+	}
 
 	if document.JSONAPI != nil {
 		validator.validateJSONAPI(*document.JSONAPI)
 	}
 	validator.validateLinks(document.Links, "/links")
-	validator.validatePrimaryData(document.Data, "/data")
-	validator.validateIncluded(document)
+	switch validator.options.Context {
+	case CreateRequest:
+		validator.validateResourceMutation(document.Data, "/data", identityOptional)
+	case UpdateRequest:
+		validator.validateResourceMutation(document.Data, "/data", identityID)
+	case ToOneRelationshipRequest:
+		validator.validateRelationshipPrimaryData(document.Data, "/data", false)
+	case ToManyRelationshipRequest:
+		validator.validateRelationshipPrimaryData(document.Data, "/data", true)
+	case Response:
+		validator.validatePrimaryData(document.Data, "/data", identityID, false, identityID)
+	default:
+		validator.validatePrimaryData(document.Data, "/data", identityEither, false, identityEither)
+	}
+	validator.validateIncluded(document, validator.includedIdentity())
 	for index, apiError := range document.Errors {
 		validator.validateError(apiError, "/errors/"+strconv.Itoa(index))
 	}
+}
+
+func (validator *documentValidator) requestContext() bool {
+	return validator.options.Context == CreateRequest ||
+		validator.options.Context == UpdateRequest ||
+		validator.options.Context == ToOneRelationshipRequest ||
+		validator.options.Context == ToManyRelationshipRequest
+}
+
+func (validator *documentValidator) includedIdentity() identityRequirement {
+	if validator.options.Context == Response {
+		return identityID
+	}
+
+	return identityEither
 }
 
 func (validator *documentValidator) validateJSONAPI(object JSONAPI) {
@@ -92,7 +169,13 @@ func (validator *documentValidator) validateJSONAPI(object JSONAPI) {
 	}
 }
 
-func (validator *documentValidator) validatePrimaryData(data *PrimaryData, path string) {
+func (validator *documentValidator) validatePrimaryData(
+	data *PrimaryData,
+	path string,
+	identity identityRequirement,
+	requireRelationshipData bool,
+	identifierIdentity identityRequirement,
+) {
 	if data == nil || data.kind == primaryDataNull {
 		return
 	}
@@ -101,7 +184,7 @@ func (validator *documentValidator) validatePrimaryData(data *PrimaryData, path 
 			validator.add(path, "required", "single primary data must contain a resource")
 			return
 		}
-		validator.validateResource(*data.one, path)
+		validator.validateResource(*data.one, path, identity, requireRelationshipData, identifierIdentity)
 		return
 	}
 	if data.kind != primaryDataMany {
@@ -109,18 +192,32 @@ func (validator *documentValidator) validatePrimaryData(data *PrimaryData, path 
 		return
 	}
 	for index, resource := range data.many {
-		validator.validateResource(resource, path+"/"+strconv.Itoa(index))
+		validator.validateResource(
+			resource,
+			path+"/"+strconv.Itoa(index),
+			identity,
+			requireRelationshipData,
+			identifierIdentity,
+		)
 	}
 }
 
-func (validator *documentValidator) validateResource(resource ResourceObject, path string) {
+func (validator *documentValidator) validateResource(
+	resource ResourceObject,
+	path string,
+	identity identityRequirement,
+	requireRelationshipData bool,
+	identifierIdentity identityRequirement,
+) {
 	if resource.Type == "" {
 		validator.add(path+"/type", "required", "resource type is required")
 	} else if !validMemberName(resource.Type) {
 		validator.add(path+"/type", "member-name", "resource type must be a valid member name")
 	}
-	if resource.ID == "" && resource.LID == "" {
+	if identity == identityID && resource.ID == "" {
 		validator.add(path+"/id", "required", "resource id is required")
+	} else if identity == identityEither && resource.ID == "" && resource.LID == "" {
+		validator.add(path+"/id", "required", "resource id or lid is required")
 	}
 
 	for name := range resource.Attributes {
@@ -141,20 +238,37 @@ func (validator *documentValidator) validateResource(resource ResourceObject, pa
 		if _, exists := resource.Attributes[name]; exists && !strings.HasPrefix(name, "@") {
 			validator.add(fieldPath, "duplicate-field", "attribute and relationship names must be unique")
 		}
-		validator.validateRelationship(relationship, fieldPath)
+		validator.validateRelationship(
+			relationship,
+			fieldPath,
+			requireRelationshipData,
+			identifierIdentity,
+		)
 	}
 	validator.validateLinks(resource.Links, path+"/links")
 }
 
-func (validator *documentValidator) validateRelationship(relationship Relationship, path string) {
+func (validator *documentValidator) validateRelationship(
+	relationship Relationship,
+	path string,
+	requireData bool,
+	identifierIdentity identityRequirement,
+) {
 	if relationship.Links == nil && relationship.Data == nil && relationship.Meta == nil {
 		validator.add(path, "required", "relationship must contain links, data, or meta")
 	}
+	if requireData && relationship.Data == nil {
+		validator.add(path+"/data", "required", "resource mutation relationships require data")
+	}
 	validator.validateLinks(relationship.Links, path+"/links")
-	validator.validateRelationshipData(relationship.Data, path+"/data")
+	validator.validateRelationshipData(relationship.Data, path+"/data", identifierIdentity)
 }
 
-func (validator *documentValidator) validateRelationshipData(data *RelationshipData, path string) {
+func (validator *documentValidator) validateRelationshipData(
+	data *RelationshipData,
+	path string,
+	identity identityRequirement,
+) {
 	if data == nil || data.kind == relationshipDataNull {
 		return
 	}
@@ -163,7 +277,7 @@ func (validator *documentValidator) validateRelationshipData(data *RelationshipD
 			validator.add(path, "required", "to-one linkage must contain an identifier")
 			return
 		}
-		validator.validateIdentifier(*data.one, path)
+		validator.validateIdentifier(*data.one, path, identity)
 		return
 	}
 	if data.kind != relationshipDataMany {
@@ -171,18 +285,94 @@ func (validator *documentValidator) validateRelationshipData(data *RelationshipD
 		return
 	}
 	for index, identifier := range data.many {
-		validator.validateIdentifier(identifier, path+"/"+strconv.Itoa(index))
+		validator.validateIdentifier(identifier, path+"/"+strconv.Itoa(index), identity)
 	}
 }
 
-func (validator *documentValidator) validateIdentifier(identifier Identifier, path string) {
+func (validator *documentValidator) validateIdentifier(
+	identifier Identifier,
+	path string,
+	identity identityRequirement,
+) {
 	if identifier.Type == "" {
 		validator.add(path+"/type", "required", "resource identifier type is required")
 	} else if !validMemberName(identifier.Type) {
 		validator.add(path+"/type", "member-name", "resource identifier type must be a valid member name")
 	}
-	if identifier.ID == "" && identifier.LID == "" {
+	if identity == identityID && identifier.ID == "" {
+		validator.add(path+"/id", "required", "resource identifier id is required")
+	} else if identity == identityEither && identifier.ID == "" && identifier.LID == "" {
 		validator.add(path+"/id", "required", "resource identifier requires id or lid")
+	}
+}
+
+func (validator *documentValidator) validateResourceMutation(
+	data *PrimaryData,
+	path string,
+	identity identityRequirement,
+) {
+	if data == nil {
+		return
+	}
+	if data.kind != primaryDataOne || data.one == nil {
+		validator.add(path, "shape", "resource mutation data must be one resource object")
+		return
+	}
+	resource := *data.one
+	validator.validateResource(resource, path, identity, true, identityEither)
+	validator.validateExpectedIdentity(resource, path)
+}
+
+func (validator *documentValidator) validateExpectedIdentity(resource ResourceObject, path string) {
+	if validator.options.ExpectedType != "" && resource.Type != "" &&
+		resource.Type != validator.options.ExpectedType {
+		validator.add(path+"/type", "endpoint-mismatch", "resource type does not match endpoint")
+	}
+	if validator.options.ExpectedID != "" && resource.ID != "" &&
+		resource.ID != validator.options.ExpectedID {
+		validator.add(path+"/id", "endpoint-mismatch", "resource id does not match endpoint")
+	}
+}
+
+func (validator *documentValidator) validateRelationshipPrimaryData(
+	data *PrimaryData,
+	path string,
+	many bool,
+) {
+	if data == nil {
+		return
+	}
+	if !many && data.kind == primaryDataNull {
+		return
+	}
+	if !many && data.kind == primaryDataOne && data.one != nil {
+		validator.validatePrimaryIdentifier(*data.one, path)
+		return
+	}
+	if many && data.kind == primaryDataMany {
+		for index, resource := range data.many {
+			validator.validatePrimaryIdentifier(resource, path+"/"+strconv.Itoa(index))
+		}
+		return
+	}
+	validator.add(path, "shape", "relationship data has the wrong to-one or to-many shape")
+}
+
+func (validator *documentValidator) validatePrimaryIdentifier(resource ResourceObject, path string) {
+	validator.validateIdentifier(Identifier{
+		Type: resource.Type,
+		ID:   resource.ID,
+		LID:  resource.LID,
+		Meta: resource.Meta,
+	}, path, identityID)
+	if resource.Attributes != nil {
+		validator.add(path+"/attributes", "forbidden", "resource identifier must not contain attributes")
+	}
+	if resource.Relationships != nil {
+		validator.add(path+"/relationships", "forbidden", "resource identifier must not contain relationships")
+	}
+	if resource.Links != nil {
+		validator.add(path+"/links", "forbidden", "resource identifier must not contain links")
 	}
 }
 
@@ -271,7 +461,10 @@ func (validator *documentValidator) validateError(apiError ErrorObject, path str
 	}
 }
 
-func (validator *documentValidator) validateIncluded(document Document) {
+func (validator *documentValidator) validateIncluded(
+	document Document,
+	identity identityRequirement,
+) {
 	if document.Included == nil {
 		return
 	}
@@ -279,7 +472,7 @@ func (validator *documentValidator) validateIncluded(document Document) {
 	included := make(map[string]int, len(document.Included))
 	for index, resource := range document.Included {
 		path := "/included/" + strconv.Itoa(index)
-		validator.validateResource(resource, path)
+		validator.validateResource(resource, path, identity, false, identity)
 		key := resourceKey(resource.Type, resource.ID, resource.LID)
 		if previous, exists := included[key]; exists {
 			validator.add(
