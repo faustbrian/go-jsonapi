@@ -219,3 +219,99 @@ func TestCoreCodecRejectsTopLevelExtensionMemberAsSemanticContent(t *testing.T) 
 		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
 	}
 }
+
+func TestCodecRoundTripsRelationshipExtensionMemberAsSemanticContent(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: RelationshipMemberScope,
+			Name:  "version:state",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","relationships":{"history":{"version:state":"archived"}}}}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode relationship extension document: %v", err)
+	}
+	relationship := document.Data.one.Relationships["history"]
+	if relationship.AdditionalMembers["version:state"] != "archived" {
+		t.Fatalf("relationship member was not preserved: %#v", relationship)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode relationship extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsRelationshipExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","relationships":{"history":{"version:state":"archived"}}}}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/data/relationships/history/version:state" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{Data: ResourceData(ResourceObject{
+		Type: "articles",
+		ID:   "1",
+		Relationships: Relationships{"history": {
+			AdditionalMembers: Members{"version:state": "archived"},
+		}},
+	})})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/data/relationships/history/version:state",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
+
+func TestCodecRejectsInvalidRelationshipExtensionMemberValue(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: RelationshipMemberScope,
+			Name:  "version:state",
+			Validate: func(value any) error {
+				if value != "archived" {
+					return errors.New("state must be archived")
+				}
+				return nil
+			},
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	_, err = codec.Unmarshal([]byte(`{"data":{"type":"articles","id":"1","relationships":{"history":{"version:state":"active"}}}}`))
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/data/relationships/history/version:state",
+			"member-value",
+		) {
+		t.Fatalf("unexpected value error: %T %#v", err, validationError)
+	}
+}

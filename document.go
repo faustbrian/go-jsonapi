@@ -235,9 +235,10 @@ type Relationships map[string]Relationship
 
 // Relationship is a JSON:API relationship object.
 type Relationship struct {
-	Links Links             `json:"links,omitempty"`
-	Data  *RelationshipData `json:"data,omitempty"`
-	Meta  Meta              `json:"meta,omitempty"`
+	Links             Links             `json:"links,omitempty"`
+	Data              *RelationshipData `json:"data,omitempty"`
+	Meta              Meta              `json:"meta,omitempty"`
+	AdditionalMembers Members           `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -252,7 +253,7 @@ func (relationship Relationship) MarshalJSON() ([]byte, error) {
 		meta = &relationship.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		Links *Links            `json:"links,omitempty"`
 		Data  *RelationshipData `json:"data,omitempty"`
 		Meta  *Meta             `json:"meta,omitempty"`
@@ -260,7 +261,9 @@ func (relationship Relationship) MarshalJSON() ([]byte, error) {
 		Links: links,
 		Data:  relationship.Data,
 		Meta:  meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, relationship.AdditionalMembers)
 }
 
 type relationshipDataKind uint8

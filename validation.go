@@ -55,7 +55,6 @@ type ValidationOptions struct {
 	// to full linkage. Set it only when requested sparse fieldsets omitted the
 	// relationship fields that would otherwise link included resources.
 	SparseFieldsetsOmittedLinkage bool
-	extensionTopLevelPresent      bool
 }
 
 // Error implements error.
@@ -110,7 +109,7 @@ const (
 
 func (validator *documentValidator) validateDocument(document Document) {
 	if document.Data == nil && document.Errors == nil && document.Meta == nil &&
-		!validator.options.extensionTopLevelPresent {
+		len(document.AdditionalMembers) == 0 {
 		validator.add("", "required", "document must contain data, errors, or meta")
 	}
 	if document.Data != nil && document.Errors != nil {
@@ -278,7 +277,8 @@ func (validator *documentValidator) validateRelationship(
 	requireData bool,
 	identifierIdentity identityRequirement,
 ) {
-	if relationship.Links == nil && relationship.Data == nil && relationship.Meta == nil {
+	if relationship.Links == nil && relationship.Data == nil && relationship.Meta == nil &&
+		len(relationship.AdditionalMembers) == 0 {
 		validator.add(path, "required", "relationship must contain links, data, or meta")
 	}
 	if requireData && relationship.Data == nil {

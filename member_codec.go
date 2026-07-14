@@ -19,6 +19,7 @@ type MemberScope uint8
 const (
 	TopLevelMemberScope MemberScope = iota + 1
 	ResourceMemberScope
+	RelationshipMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -75,7 +76,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 		seenNamespaces[extension.Namespace] = struct{}{}
 		for _, definition := range extension.Members {
 			if definition.Scope != TopLevelMemberScope &&
-				definition.Scope != ResourceMemberScope {
+				definition.Scope != ResourceMemberScope &&
+				definition.Scope != RelationshipMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -105,9 +107,7 @@ func (codec *Codec) Marshal(document Document) ([]byte, error) {
 	if err := validateDocumentMembers(document, codec.members); err != nil {
 		return nil, err
 	}
-	validation := codec.validation
-	validation.extensionTopLevelPresent = len(document.AdditionalMembers) > 0
-	if err := document.ValidateWith(validation); err != nil {
+	if err := document.ValidateWith(codec.validation); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +132,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		return Document{}, err
 	}
 
-	var primaryMembers []Members
+	var primaryMembers []resourceMemberState
 	if raw, exists := root["data"]; exists {
 		sanitized, extracted, sanitizeErr := codec.sanitizePrimaryData(raw, "/data")
 		if sanitizeErr != nil {
@@ -141,7 +141,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		root["data"] = sanitized
 		primaryMembers = extracted
 	}
-	var includedMembers []Members
+	var includedMembers []resourceMemberState
 	if raw, exists := root["included"]; exists {
 		sanitized, extracted, sanitizeErr := codec.sanitizeResourceArray(raw, "/included")
 		if sanitizeErr != nil {
@@ -154,9 +154,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err != nil {
 		return Document{}, decodeFailure("", "syntax", "could not normalize document", err)
 	}
-	validation := codec.validation
-	validation.extensionTopLevelPresent = len(topMembers) > 0
-	document, err := UnmarshalWith(sanitized, validation)
+	document, err := decodeDocument(sanitized)
 	if err != nil {
 		return Document{}, err
 	}
@@ -164,8 +162,14 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	attachPrimaryMembers(document.Data, primaryMembers)
 	for index := range document.Included {
 		if index < len(includedMembers) {
-			document.Included[index].AdditionalMembers = includedMembers[index]
+			attachResourceMembers(&document.Included[index], includedMembers[index])
 		}
+	}
+	if err := validateDocumentMembers(document, codec.members); err != nil {
+		return Document{}, err
+	}
+	if err := document.ValidateWith(codec.validation); err != nil {
+		return Document{}, err
 	}
 
 	return document, nil
@@ -174,7 +178,7 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 func (codec *Codec) sanitizePrimaryData(
 	raw json.RawMessage,
 	path string,
-) (json.RawMessage, []Members, error) {
+) (json.RawMessage, []resourceMemberState, error) {
 	trimmed := bytes.TrimSpace(raw)
 	if bytes.Equal(trimmed, []byte("null")) {
 		return raw, nil, nil
@@ -183,18 +187,18 @@ func (codec *Codec) sanitizePrimaryData(
 		return codec.sanitizeResourceArray(raw, path)
 	}
 	sanitized, members, err := codec.sanitizeResource(raw, path)
-	return sanitized, []Members{members}, err
+	return sanitized, []resourceMemberState{members}, err
 }
 
 func (codec *Codec) sanitizeResourceArray(
 	raw json.RawMessage,
 	path string,
-) (json.RawMessage, []Members, error) {
+) (json.RawMessage, []resourceMemberState, error) {
 	var items []json.RawMessage
 	if err := json.Unmarshal(raw, &items); err != nil || items == nil {
 		return nil, nil, decodeFailure(path, "type", "value must be an array", err)
 	}
-	members := make([]Members, len(items))
+	members := make([]resourceMemberState, len(items))
 	for index, item := range items {
 		sanitized, extracted, err := codec.sanitizeResource(
 			item,
@@ -213,17 +217,70 @@ func (codec *Codec) sanitizeResourceArray(
 func (codec *Codec) sanitizeResource(
 	raw json.RawMessage,
 	path string,
-) (json.RawMessage, Members, error) {
+) (json.RawMessage, resourceMemberState, error) {
+	object, err := decodeObject(raw, path)
+	if err != nil {
+		return nil, resourceMemberState{}, err
+	}
+	members, err := codec.extractMembers(object, ResourceMemberScope, path)
+	if err != nil {
+		return nil, resourceMemberState{}, err
+	}
+	state := resourceMemberState{members: members}
+	if rawRelationships, exists := object["relationships"]; exists {
+		sanitized, relationships, sanitizeErr := codec.sanitizeRelationships(
+			rawRelationships,
+			path+"/relationships",
+		)
+		if sanitizeErr != nil {
+			return nil, resourceMemberState{}, sanitizeErr
+		}
+		object["relationships"] = sanitized
+		state.relationships = relationships
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, state, err
+}
+
+type resourceMemberState struct {
+	members       Members
+	relationships map[string]Members
+}
+
+func (codec *Codec) sanitizeRelationships(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, map[string]Members, error) {
 	object, err := decodeObject(raw, path)
 	if err != nil {
 		return nil, nil, err
 	}
-	members, err := codec.extractMembers(object, ResourceMemberScope, path)
-	if err != nil {
-		return nil, nil, err
+	states := make(map[string]Members)
+	for name, rawRelationship := range object {
+		relationshipPath := path + "/" + escapePointerToken(name)
+		relationship, decodeErr := decodeObject(rawRelationship, relationshipPath)
+		if decodeErr != nil {
+			return nil, nil, decodeErr
+		}
+		members, extractErr := codec.extractMembers(
+			relationship,
+			RelationshipMemberScope,
+			relationshipPath,
+		)
+		if extractErr != nil {
+			return nil, nil, extractErr
+		}
+		sanitized, marshalErr := json.Marshal(relationship)
+		if marshalErr != nil {
+			return nil, nil, marshalErr
+		}
+		object[name] = sanitized
+		if len(members) > 0 {
+			states[name] = members
+		}
 	}
 	sanitized, err := json.Marshal(object)
-	return sanitized, members, err
+	return sanitized, states, err
 }
 
 func (codec *Codec) extractMembers(
@@ -271,19 +328,31 @@ func decodeAdditionalMember(raw json.RawMessage, path string) (any, error) {
 	return stripAtMembers(value), nil
 }
 
-func attachPrimaryMembers(data *PrimaryData, members []Members) {
+func attachPrimaryMembers(data *PrimaryData, members []resourceMemberState) {
 	if data == nil {
 		return
 	}
 	if data.kind == primaryDataOne && data.one != nil && len(members) > 0 {
-		data.one.AdditionalMembers = members[0]
+		attachResourceMembers(data.one, members[0])
 	}
 	if data.kind == primaryDataMany {
 		for index := range data.many {
 			if index < len(members) {
-				data.many[index].AdditionalMembers = members[index]
+				attachResourceMembers(&data.many[index], members[index])
 			}
 		}
+	}
+}
+
+func attachResourceMembers(resource *ResourceObject, state resourceMemberState) {
+	resource.AdditionalMembers = state.members
+	for name, members := range state.relationships {
+		relationship, exists := resource.Relationships[name]
+		if !exists {
+			continue
+		}
+		relationship.AdditionalMembers = members
+		resource.Relationships[name] = relationship
 	}
 }
 
@@ -328,6 +397,28 @@ func validateDocumentMembers(
 						validator.violations,
 						memberValueViolation(observation.path, name, err),
 					)
+				}
+			}
+		}
+		for name, relationship := range observation.resource.Relationships {
+			path := observation.path + "/relationships/" + escapePointerToken(name)
+			for memberName, value := range relationship.AdditionalMembers {
+				definition, exists := registry[RelationshipMemberScope][memberName]
+				if !exists {
+					validator.add(
+						path+"/"+escapePointerToken(memberName),
+						"unregistered-member",
+						"member is not registered for this object scope",
+					)
+					continue
+				}
+				if definition.Validate != nil {
+					if err := definition.Validate(value); err != nil {
+						validator.violations = append(
+							validator.violations,
+							memberValueViolation(path, memberName, err),
+						)
+					}
 				}
 			}
 		}

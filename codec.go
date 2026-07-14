@@ -63,7 +63,18 @@ func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) 
 	if err := rejectDuplicateMembers(payload); err != nil {
 		return Document{}, err
 	}
+	document, err := decodeDocument(payload)
+	if err != nil {
+		return Document{}, err
+	}
+	if err := document.ValidateWith(options); err != nil {
+		return Document{}, err
+	}
 
+	return document, nil
+}
+
+func decodeDocument(payload []byte) (Document, error) {
 	root, err := decodeObject(payload, "")
 	if err != nil {
 		return Document{}, err
@@ -114,10 +125,6 @@ func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) 
 			return Document{}, decodeErr
 		}
 		document.Meta = meta
-	}
-
-	if err := document.ValidateWith(options); err != nil {
-		return Document{}, err
 	}
 
 	return document, nil
