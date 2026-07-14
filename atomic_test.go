@@ -342,6 +342,136 @@ func TestAtomicOperationValidationAcceptsNormativeShapes(t *testing.T) {
 	}
 }
 
+func TestAtomicValidationCoversOperationDataShapes(t *testing.T) {
+	t.Parallel()
+
+	valid := []AtomicOperation{
+		{
+			Op: AtomicRemove,
+			Ref: &AtomicReference{
+				Type: "articles", ID: "1", Relationship: "tags",
+			},
+			Data: ResourceCollection(ResourceObject{Type: "tags", ID: "2"}),
+		},
+		{
+			Op:   AtomicRemove,
+			Href: "/articles/1",
+			Data: ResourceData(ResourceObject{Type: "articles", ID: "1"}),
+		},
+		{
+			Op: AtomicUpdate,
+			Ref: &AtomicReference{
+				Type: "articles", ID: "1", Relationship: "author",
+			},
+			Data: ResourceData(ResourceObject{Type: "people", ID: "9"}),
+		},
+	}
+	for _, operation := range valid {
+		if err := (AtomicDocument{Operations: []AtomicOperation{operation}}).Validate(); err != nil {
+			t.Fatalf("valid operation rejected: %#v: %v", operation, err)
+		}
+	}
+
+	identifierWithResourceMembers := ResourceObject{
+		Type:          "people",
+		ID:            "9",
+		Attributes:    Attributes{"name": "Jane"},
+		Relationships: Relationships{"team": {Data: NullRelationship()}},
+		Links:         Links{"self": URI("/people/9")},
+	}
+	tests := []struct {
+		operation AtomicOperation
+		path      string
+		code      string
+	}{
+		{
+			operation: AtomicOperation{
+				Op:   AtomicRemove,
+				Ref:  &AtomicReference{Type: "articles", ID: "1"},
+				Data: NullData(),
+			},
+			path: "/atomic:operations/0/data",
+			code: "forbidden",
+		},
+		{
+			operation: AtomicOperation{
+				Op:   AtomicUpdate,
+				Href: "/articles/1",
+				Data: ResourceCollection(),
+			},
+			path: "/atomic:operations/0/data",
+			code: "shape",
+		},
+		{
+			operation: AtomicOperation{
+				Op: AtomicAdd,
+				Ref: &AtomicReference{
+					Type: "articles", ID: "1", Relationship: "tags",
+				},
+				Data: ResourceData(ResourceObject{Type: "tags", ID: "2"}),
+			},
+			path: "/atomic:operations/0/data",
+			code: "shape",
+		},
+		{
+			operation: AtomicOperation{
+				Op: AtomicUpdate,
+				Ref: &AtomicReference{
+					Type: "bad:name", ID: "1", Relationship: "author",
+				},
+				Data: ResourceData(identifierWithResourceMembers),
+			},
+			path: "/atomic:operations/0/ref/type",
+			code: "member-name",
+		},
+		{
+			operation: AtomicOperation{
+				Op: AtomicUpdate,
+				Ref: &AtomicReference{
+					Type: "articles", ID: "1", Relationship: "author",
+				},
+				Data: ResourceData(identifierWithResourceMembers),
+			},
+			path: "/atomic:operations/0/data/attributes",
+			code: "forbidden",
+		},
+		{
+			operation: AtomicOperation{
+				Op: AtomicUpdate,
+				Ref: &AtomicReference{
+					Type: "articles", ID: "1", Relationship: "author",
+				},
+				Data: &PrimaryData{kind: primaryDataKind(99)},
+			},
+			path: "/atomic:operations/0/data",
+			code: "shape",
+		},
+	}
+	for _, test := range tests {
+		document := AtomicDocument{Operations: []AtomicOperation{test.operation}}
+		err := document.Validate()
+		var validationError *ValidationError
+		if !errors.As(err, &validationError) ||
+			!hasViolation(validationError, test.path, test.code) {
+			t.Fatalf("unexpected validation for %#v: %T %#v", test.operation, err, validationError)
+		}
+	}
+
+	err := (AtomicDocument{Operations: []AtomicOperation{{
+		Op: AtomicUpdate,
+		Ref: &AtomicReference{
+			Type: "articles", ID: "1", Relationship: "author",
+		},
+		Data: ResourceData(identifierWithResourceMembers),
+	}}}).Validate()
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(validationError, "/atomic:operations/0/data/relationships", "forbidden") ||
+		!hasViolation(validationError, "/atomic:operations/0/data/links", "forbidden") {
+		t.Fatalf("missing identifier-only violations: %#v", validationError)
+	}
+}
+
 func TestAtomicContextValidation(t *testing.T) {
 	t.Parallel()
 
