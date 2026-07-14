@@ -37,10 +37,10 @@ type AtomicOperation struct {
 
 // AtomicReference identifies a resource or one of its relationships.
 type AtomicReference struct {
-	Type         string
-	ID           string
-	LID          string
-	Relationship string
+	Type         string `json:"type"`
+	ID           string `json:"id,omitempty"`
+	LID          string `json:"lid,omitempty"`
+	Relationship string `json:"relationship,omitempty"`
 }
 
 // AtomicResult describes the result at the same position as its operation.
