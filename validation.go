@@ -731,9 +731,11 @@ func validMemberName(name string) bool {
 	if !globallyAllowed(runes[0]) || !globallyAllowed(runes[len(runes)-1]) {
 		return false
 	}
-	for _, character := range runes[1 : len(runes)-1] {
-		if !globallyAllowed(character) && character != '-' && character != '_' && character != ' ' {
-			return false
+	if len(runes) > 2 {
+		for _, character := range runes[1 : len(runes)-1] {
+			if !globallyAllowed(character) && character != '-' && character != '_' && character != ' ' {
+				return false
+			}
 		}
 	}
 
