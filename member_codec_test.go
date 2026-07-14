@@ -315,3 +315,105 @@ func TestCodecRejectsInvalidRelationshipExtensionMemberValue(t *testing.T) {
 		t.Fatalf("unexpected value error: %T %#v", err, validationError)
 	}
 }
+
+func TestCodecRoundTripsIdentifierExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: IdentifierMemberScope,
+			Name:  "version:etag",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9","version:etag":"abc"}}}}}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode identifier extension document: %v", err)
+	}
+	identifier := document.Data.one.Relationships["author"].Data.one
+	if identifier == nil || identifier.AdditionalMembers["version:etag"] != "abc" {
+		t.Fatalf("identifier member was not preserved: %#v", identifier)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode identifier extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsIdentifierExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9","version:etag":"abc"}}}}}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/data/relationships/author/data/version:etag" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{Data: ResourceData(ResourceObject{
+		Type: "articles",
+		ID:   "1",
+		Relationships: Relationships{"author": {
+			Data: ToOne(Identifier{
+				Type:              "people",
+				ID:                "9",
+				AdditionalMembers: Members{"version:etag": "abc"},
+			}),
+		}},
+	})})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/data/relationships/author/data/version:etag",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
+
+func TestCodecRoundTripsToManyIdentifierExtensionMembers(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: IdentifierMemberScope,
+			Name:  "version:etag",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[{"type":"comments","id":"1","version:etag":"a"},{"type":"comments","id":"2","version:etag":"b"}]}}}}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode to-many identifier members: %v", err)
+	}
+	identifiers := document.Data.one.Relationships["comments"].Data.many
+	if len(identifiers) != 2 ||
+		identifiers[0].AdditionalMembers["version:etag"] != "a" ||
+		identifiers[1].AdditionalMembers["version:etag"] != "b" {
+		t.Fatalf("identifier members were not preserved: %#v", identifiers)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode to-many identifier members: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}

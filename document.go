@@ -156,10 +156,11 @@ func (resource ResourceObject) MarshalJSON() ([]byte, error) {
 
 // Identifier identifies a resource by type and either server or local ID.
 type Identifier struct {
-	Type string `json:"type"`
-	ID   string `json:"id,omitempty"`
-	LID  string `json:"lid,omitempty"`
-	Meta Meta   `json:"meta,omitempty"`
+	Type              string  `json:"type"`
+	ID                string  `json:"id,omitempty"`
+	LID               string  `json:"lid,omitempty"`
+	Meta              Meta    `json:"meta,omitempty"`
+	AdditionalMembers Members `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving an explicitly empty
@@ -170,7 +171,7 @@ func (identifier Identifier) MarshalJSON() ([]byte, error) {
 		meta = &identifier.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		Type string `json:"type"`
 		ID   string `json:"id,omitempty"`
 		LID  string `json:"lid,omitempty"`
@@ -180,7 +181,9 @@ func (identifier Identifier) MarshalJSON() ([]byte, error) {
 		ID:   identifier.ID,
 		LID:  identifier.LID,
 		Meta: meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, identifier.AdditionalMembers)
 }
 
 type primaryDataKind uint8

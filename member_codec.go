@@ -20,6 +20,7 @@ const (
 	TopLevelMemberScope MemberScope = iota + 1
 	ResourceMemberScope
 	RelationshipMemberScope
+	IdentifierMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -77,7 +78,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 		for _, definition := range extension.Members {
 			if definition.Scope != TopLevelMemberScope &&
 				definition.Scope != ResourceMemberScope &&
-				definition.Scope != RelationshipMemberScope {
+				definition.Scope != RelationshipMemberScope &&
+				definition.Scope != IdentifierMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -244,18 +246,23 @@ func (codec *Codec) sanitizeResource(
 
 type resourceMemberState struct {
 	members       Members
-	relationships map[string]Members
+	relationships map[string]relationshipMemberState
+}
+
+type relationshipMemberState struct {
+	members     Members
+	identifiers []Members
 }
 
 func (codec *Codec) sanitizeRelationships(
 	raw json.RawMessage,
 	path string,
-) (json.RawMessage, map[string]Members, error) {
+) (json.RawMessage, map[string]relationshipMemberState, error) {
 	object, err := decodeObject(raw, path)
 	if err != nil {
 		return nil, nil, err
 	}
-	states := make(map[string]Members)
+	states := make(map[string]relationshipMemberState)
 	for name, rawRelationship := range object {
 		relationshipPath := path + "/" + escapePointerToken(name)
 		relationship, decodeErr := decodeObject(rawRelationship, relationshipPath)
@@ -270,17 +277,80 @@ func (codec *Codec) sanitizeRelationships(
 		if extractErr != nil {
 			return nil, nil, extractErr
 		}
+		state := relationshipMemberState{members: members}
+		if rawData, exists := relationship["data"]; exists {
+			sanitizedData, identifiers, sanitizeErr := codec.sanitizeIdentifierData(
+				rawData,
+				relationshipPath+"/data",
+			)
+			if sanitizeErr != nil {
+				return nil, nil, sanitizeErr
+			}
+			relationship["data"] = sanitizedData
+			state.identifiers = identifiers
+		}
 		sanitized, marshalErr := json.Marshal(relationship)
 		if marshalErr != nil {
 			return nil, nil, marshalErr
 		}
 		object[name] = sanitized
-		if len(members) > 0 {
-			states[name] = members
+		if len(state.members) > 0 || len(state.identifiers) > 0 {
+			states[name] = state
 		}
 	}
 	sanitized, err := json.Marshal(object)
 	return sanitized, states, err
+}
+
+func (codec *Codec) sanitizeIdentifierData(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, []Members, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if bytes.Equal(trimmed, []byte("null")) || len(trimmed) == 0 {
+		return raw, nil, nil
+	}
+	if trimmed[0] == '{' {
+		sanitized, members, err := codec.sanitizeIdentifier(raw, path)
+		return sanitized, []Members{members}, err
+	}
+	if trimmed[0] != '[' {
+		return raw, nil, nil
+	}
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil || items == nil {
+		return nil, nil, decodeFailure(path, "type", "to-many linkage must be an array", err)
+	}
+	states := make([]Members, len(items))
+	for index, item := range items {
+		sanitized, members, err := codec.sanitizeIdentifier(
+			item,
+			path+"/"+fmt.Sprintf("%d", index),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		items[index] = sanitized
+		states[index] = members
+	}
+	sanitized, err := json.Marshal(items)
+	return sanitized, states, err
+}
+
+func (codec *Codec) sanitizeIdentifier(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, Members, error) {
+	object, err := decodeObject(raw, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	members, err := codec.extractMembers(object, IdentifierMemberScope, path)
+	if err != nil {
+		return nil, nil, err
+	}
+	sanitized, err := json.Marshal(object)
+	return sanitized, members, err
 }
 
 func (codec *Codec) extractMembers(
@@ -346,13 +416,30 @@ func attachPrimaryMembers(data *PrimaryData, members []resourceMemberState) {
 
 func attachResourceMembers(resource *ResourceObject, state resourceMemberState) {
 	resource.AdditionalMembers = state.members
-	for name, members := range state.relationships {
+	for name, relationshipState := range state.relationships {
 		relationship, exists := resource.Relationships[name]
 		if !exists {
 			continue
 		}
-		relationship.AdditionalMembers = members
+		relationship.AdditionalMembers = relationshipState.members
+		attachIdentifierMembers(relationship.Data, relationshipState.identifiers)
 		resource.Relationships[name] = relationship
+	}
+}
+
+func attachIdentifierMembers(data *RelationshipData, members []Members) {
+	if data == nil {
+		return
+	}
+	if data.kind == relationshipDataOne && data.one != nil && len(members) > 0 {
+		data.one.AdditionalMembers = members[0]
+	}
+	if data.kind == relationshipDataMany {
+		for index := range data.many {
+			if index < len(members) {
+				data.many[index].AdditionalMembers = members[index]
+			}
+		}
 	}
 }
 
@@ -421,12 +508,69 @@ func validateDocumentMembers(
 					}
 				}
 			}
+			validateIdentifierDocumentMembers(
+				&validator,
+				relationship.Data,
+				path+"/data",
+				registry[IdentifierMemberScope],
+			)
 		}
 	}
 	if len(validator.violations) == 0 {
 		return nil
 	}
 	return &ValidationError{Violations: validator.violations}
+}
+
+func validateIdentifierDocumentMembers(
+	validator *documentValidator,
+	data *RelationshipData,
+	path string,
+	registry map[string]MemberDefinition,
+) {
+	if data == nil {
+		return
+	}
+	if data.kind == relationshipDataOne && data.one != nil {
+		validateScopedMembers(validator, data.one.AdditionalMembers, registry, path)
+	}
+	if data.kind == relationshipDataMany {
+		for index, identifier := range data.many {
+			validateScopedMembers(
+				validator,
+				identifier.AdditionalMembers,
+				registry,
+				path+"/"+fmt.Sprintf("%d", index),
+			)
+		}
+	}
+}
+
+func validateScopedMembers(
+	validator *documentValidator,
+	members Members,
+	registry map[string]MemberDefinition,
+	path string,
+) {
+	for name, value := range members {
+		definition, exists := registry[name]
+		if !exists {
+			validator.add(
+				path+"/"+escapePointerToken(name),
+				"unregistered-member",
+				"member is not registered for this object scope",
+			)
+			continue
+		}
+		if definition.Validate != nil {
+			if err := definition.Validate(value); err != nil {
+				validator.violations = append(
+					validator.violations,
+					memberValueViolation(path, name, err),
+				)
+			}
+		}
+	}
 }
 
 func memberValueError(path, name string, err error) error {
