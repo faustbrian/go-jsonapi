@@ -1,0 +1,267 @@
+# Goal: `go-jsonapi`
+
+## Objective
+
+Build an open source Go package that implements the JSON:API specification
+seriously enough to serve as a production foundation for Shipit services and
+other external users.
+
+This package exists because the current Go JSON:API ecosystem is not strong
+enough to treat as an obvious long-term dependency for multiple high-traffic
+services. The goal is not a thin serializer helper. The goal is a real,
+maintained foundation that can become a trusted default.
+
+## Product Position
+
+`go-jsonapi` should be:
+
+- open source
+- framework-agnostic
+- transport-agnostic at the core
+- usable from plain `net/http`
+- suitable for production APIs with strict compatibility requirements
+- explicit about what parts of the spec are implemented and verified
+
+It should not assume a specific router, ORM, validator, or dependency
+injection framework.
+
+## Why This Exists
+
+The package is being considered before a broader move of several PHP/Laravel
+services to Go. The initial service set includes at least:
+
+- `track`
+- `postal`
+- `location`
+
+Even if those first services do not all require JSON:API immediately, the
+organization wants a deliberate answer to the question: if JSON:API becomes a
+required transport in Go, what package do we trust?
+
+`go-jsonapi` should answer that question with something maintainable and
+reliable rather than forcing every service to re-implement the same behaviors
+or depend on abandoned packages.
+
+## Scope
+
+### In Scope
+
+- complete support for the core JSON:API specification
+- request and response document modeling
+- resource objects, relationships, links, meta, errors, and included data
+- compound documents
+- sparse fieldsets
+- sorting and pagination parameter handling hooks
+- filter parameter handling hooks
+- content negotiation for `application/vnd.api+json`
+- strict document validation
+- deterministic serialization
+- deserialization into typed application-facing structures
+- extension points for project-specific conventions
+- high-quality test fixtures and conformance tests
+- clear compatibility promises and versioning
+
+### Potentially In Scope After Core Stabilizes
+
+- common extension support patterns
+- cursor pagination conventions
+- OpenAPI or schema generation helpers
+- client helpers
+- middleware for popular routers
+- code generation helpers for resource definitions
+
+### Out of Scope For The First Version
+
+- ORM integration
+- framework-specific controllers
+- generated admin tooling
+- project-specific auth conventions
+- project-specific pagination semantics
+- magical reflection-heavy behavior that hides transport rules
+
+## Non-Goals
+
+- Do not optimize for minimal LOC if it harms correctness.
+- Do not try to become a web framework.
+- Do not couple the package to Redis, Postgres, queues, or job processing.
+- Do not assume that every team wants the same filtering or pagination rules.
+- Do not ship a vague “supports JSON:API” claim without spec-backed evidence.
+
+## Core Requirements
+
+### 1. Spec Fidelity
+
+The package must implement the full core JSON:API behavior intentionally.
+Features must be documented as:
+
+- implemented
+- explicitly unsupported
+- planned but not yet implemented
+
+Do not leave behavior ambiguous.
+
+### 2. Deterministic Output
+
+The same input document structure must produce the same serialized output.
+Tests should treat response stability as a first-class compatibility concern.
+
+### 3. Explicit Validation
+
+Invalid JSON:API documents must fail clearly and predictably. Error reporting
+must be good enough to use the package at an API boundary without forcing
+callers to reverse-engineer parsing failures.
+
+### 4. Good Performance
+
+The package must be efficient enough for production use, but correctness wins
+over speculative micro-optimization in the first version.
+
+Performance work should focus on:
+
+- reducing unnecessary allocations
+- avoiding reflection-heavy hot paths when possible
+- minimizing repeated map reshaping
+- keeping large compound-document handling predictable
+
+### 5. Extensibility Without Framework Lock-In
+
+The core package should expose clean interfaces and composition points so
+services can:
+
+- plug in field selection
+- plug in filter parsing
+- map domain errors to JSON:API errors
+- adapt pagination strategies
+
+without forking the library.
+
+## First-Version Deliverables
+
+### Package Surface
+
+The first version should include:
+
+- document types
+- resource and relationship builders
+- strict marshal and unmarshal support
+- top-level document validation
+- error document support
+- link and meta handling
+- negotiation helpers for JSON:API content types
+- request parameter parsing primitives
+
+### Conformance Suite
+
+The repository should include:
+
+- table-driven unit tests
+- golden fixtures
+- malformed input fixtures
+- round-trip tests
+- spec behavior coverage matrix
+- benchmark suite for representative documents
+
+### Documentation
+
+The repository must ship with:
+
+- README
+- quickstart
+- architecture overview
+- supported-features matrix
+- extension guide
+- migration notes
+- compatibility policy
+
+## API Design Principles
+
+- prefer explicit typed APIs over magical tags where practical
+- avoid hiding important transport behavior behind implicit reflection
+- make zero values safe where reasonable
+- keep the package easy to audit
+- expose low-level primitives and optional higher-level helpers
+
+If tags or reflection are used, they must remain understandable and optional.
+
+## Testing Standard
+
+This package should be treated as infrastructure, not app glue.
+
+Testing must include:
+
+- unit tests for all core document operations
+- protocol-level fixtures for valid and invalid examples
+- regression tests for every discovered edge case
+- fuzzing for parsing and decoding surfaces
+- benchmarks for common response shapes
+
+The package should not claim full-spec support until the behavior matrix proves
+it.
+
+## Versioning And Compatibility
+
+- use semantic versioning
+- avoid breaking wire-format behavior casually
+- document every breaking change clearly
+- treat serialized output shape as part of compatibility
+
+Once `v1` is released, avoid redesigning core abstractions unless the existing
+API is genuinely defective.
+
+## Open Source Standard
+
+This package should be good enough to open source without embarrassment.
+
+That means:
+
+- no internal Shipit assumptions in public APIs
+- no app-specific names in exported symbols
+- no documentation that assumes local context
+- no “temporary” public surface that is really project glue
+
+## Execution Plan
+
+### Phase 1: Definition
+
+- lock the supported first-version feature matrix
+- define the public package layout
+- decide how strict validation should behave
+- define benchmark document shapes
+
+### Phase 2: Core Implementation
+
+- implement document model
+- implement serializer and parser
+- implement validation rules
+- implement top-level error handling
+
+### Phase 3: Conformance Hardening
+
+- add exhaustive fixtures
+- add fuzzing
+- add benchmarks
+- resolve API rough edges before `v1`
+
+### Phase 4: Open Source Readiness
+
+- finalize README and examples
+- publish roadmap
+- add contribution guidelines
+- tag first public release
+
+## Acceptance Criteria
+
+This goal is achieved when:
+
+- the package can honestly claim production-grade JSON:API core support
+- the public API is stable enough for real service adoption
+- conformance coverage is documented and verified
+- performance is reasonable for high-traffic APIs
+- the repo is suitable for open source publication and external use
+
+## Hard Warnings
+
+- Do not let this become an endless framework design exercise.
+- Do not add speculative app-specific convenience layers too early.
+- Do not claim “full JSON:API support” without a concrete support matrix.
+- Do not start with extensions before the core spec is solid.
