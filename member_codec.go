@@ -42,9 +42,17 @@ type ExtensionDefinition struct {
 	Members   []MemberDefinition
 }
 
+// ProfileDefinition declares an applied JSON:API profile and its optional
+// document-level implementation-semantics validator.
+type ProfileDefinition struct {
+	URI              string
+	ValidateDocument func(Document) error
+}
+
 // CodecOptions configures applied extensions and core validation context.
 type CodecOptions struct {
 	Extensions []ExtensionDefinition
+	Profiles   []ProfileDefinition
 	Validation ValidationOptions
 }
 
@@ -53,6 +61,7 @@ type CodecOptions struct {
 type Codec struct {
 	validation ValidationOptions
 	members    map[MemberScope]map[string]MemberDefinition
+	profiles   []ProfileDefinition
 }
 
 // NewCodec validates all extension definitions before constructing a codec.
@@ -108,6 +117,18 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 			codec.members[definition.Scope][definition.Name] = definition
 		}
 	}
+	seenProfiles := make(map[string]struct{}, len(options.Profiles))
+	for _, profile := range options.Profiles {
+		parsed, err := url.Parse(profile.URI)
+		if profile.URI == "" || err != nil || !parsed.IsAbs() {
+			return nil, fmt.Errorf("profile URI must be absolute: %q", profile.URI)
+		}
+		if _, exists := seenProfiles[profile.URI]; exists {
+			return nil, fmt.Errorf("duplicate profile URI: %q", profile.URI)
+		}
+		seenProfiles[profile.URI] = struct{}{}
+		codec.profiles = append(codec.profiles, profile)
+	}
 
 	return codec, nil
 }
@@ -118,6 +139,9 @@ func (codec *Codec) Marshal(document Document) ([]byte, error) {
 		return nil, err
 	}
 	if err := document.ValidateWith(codec.validation); err != nil {
+		return nil, err
+	}
+	if err := codec.validateProfiles(document); err != nil {
 		return nil, err
 	}
 
@@ -225,8 +249,23 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err := document.ValidateWith(codec.validation); err != nil {
 		return Document{}, err
 	}
+	if err := codec.validateProfiles(document); err != nil {
+		return Document{}, err
+	}
 
 	return document, nil
+}
+
+func (codec *Codec) validateProfiles(document Document) error {
+	for _, profile := range codec.profiles {
+		if profile.ValidateDocument == nil {
+			continue
+		}
+		if err := profile.ValidateDocument(document); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (codec *Codec) sanitizeErrors(
