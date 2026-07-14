@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"fmt"
+	"net/url"
 	"testing"
 )
 
@@ -21,6 +22,35 @@ func BenchmarkMarshalResourceCollection(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		if _, err := Marshal(document); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalSingleResource(b *testing.B) {
+	document := Document{Data: ResourceData(benchmarkDocument(1, false).Data.many[0])}
+	payload, err := Marshal(document)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(payload)))
+	for b.Loop() {
+		if _, err := Unmarshal(payload); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalResourceCollection(b *testing.B) {
+	payload, err := Marshal(benchmarkDocument(100, false))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(payload)))
+	for b.Loop() {
+		if _, err := Unmarshal(payload); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -51,20 +81,72 @@ func BenchmarkUnmarshalCompoundDocument(b *testing.B) {
 }
 
 func BenchmarkMarshalAtomicOperations(b *testing.B) {
-	operations := make([]AtomicOperation, 100)
-	for index := range operations {
-		operations[index] = AtomicOperation{
-			Op:   AtomicRemove,
-			Href: fmt.Sprintf("/articles/%d", index),
-		}
-	}
-	document := AtomicDocument{Operations: operations}
+	document := benchmarkAtomicDocument(100)
 	b.ReportAllocs()
 	for b.Loop() {
 		if _, err := MarshalAtomic(document); err != nil {
 			b.Fatal(err)
 		}
 	}
+}
+
+func BenchmarkUnmarshalAtomicOperations(b *testing.B) {
+	payload, err := MarshalAtomic(benchmarkAtomicDocument(100))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(payload)))
+	for b.Loop() {
+		if _, err := UnmarshalAtomic(payload); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkParseQuery(b *testing.B) {
+	values := url.Values{
+		"include":          {"author.comments,tags"},
+		"fields[articles]": {"title,body,createdAt"},
+		"filter[status]":   {"published"},
+		"page[after]":      {"opaque-cursor"},
+		"page[size]":       {"50"},
+		"sort":             {"-createdAt,title"},
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := ParseQuery(values); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkNegotiateAccept(b *testing.B) {
+	const extension = "https://example.com/extensions/version"
+	const profile = "https://example.com/profiles/timestamps"
+	negotiator, err := NewNegotiator([]string{extension}, []string{profile})
+	if err != nil {
+		b.Fatal(err)
+	}
+	header := "application/json;q=0.2, " + MediaTypeJSONAPI +
+		`;ext="` + extension + `";profile="` + profile + `";q=0.9`
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := negotiator.NegotiateAccept(header); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func benchmarkAtomicDocument(size int) AtomicDocument {
+	operations := make([]AtomicOperation, size)
+	for index := range operations {
+		operations[index] = AtomicOperation{
+			Op:   AtomicRemove,
+			Href: fmt.Sprintf("/articles/%d", index),
+		}
+	}
+	return AtomicDocument{Operations: operations}
 }
 
 func benchmarkDocument(size int, compound bool) Document {
