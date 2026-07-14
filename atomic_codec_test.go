@@ -64,6 +64,16 @@ func TestUnmarshalAtomicRejectsForbiddenAndUnknownMembers(t *testing.T) {
 		path    string
 		code    string
 	}{
+		"invalid JSON": {
+			payload: `{"atomic:operations":`,
+			path:    "",
+			code:    "syntax",
+		},
+		"root is not object": {
+			payload: `[]`,
+			path:    "",
+			code:    "type",
+		},
 		"core data": {
 			payload: `{"data":null,"atomic:operations":[{"op":"remove","href":"/articles/1"}]}`,
 			path:    "/data",
@@ -74,6 +84,31 @@ func TestUnmarshalAtomicRejectsForbiddenAndUnknownMembers(t *testing.T) {
 			path:    "/included",
 			code:    "forbidden",
 		},
+		"unknown top-level member": {
+			payload: `{"meta":{},"unknown":true}`,
+			path:    "/unknown",
+			code:    "unknown-member",
+		},
+		"jsonapi is not object": {
+			payload: `{"jsonapi":[],"meta":{}}`,
+			path:    "/jsonapi",
+			code:    "type",
+		},
+		"links is not object": {
+			payload: `{"links":[],"meta":{}}`,
+			path:    "/links",
+			code:    "type",
+		},
+		"operations is not array": {
+			payload: `{"atomic:operations":null}`,
+			path:    "/atomic:operations",
+			code:    "type",
+		},
+		"operation is not object": {
+			payload: `{"atomic:operations":[null]}`,
+			path:    "/atomic:operations/0",
+			code:    "type",
+		},
 		"unknown operation member": {
 			payload: `{"atomic:operations":[{"op":"remove","href":"/articles/1","unknown":true}]}`,
 			path:    "/atomic:operations/0/unknown",
@@ -83,6 +118,71 @@ func TestUnmarshalAtomicRejectsForbiddenAndUnknownMembers(t *testing.T) {
 			payload: `{"atomic:operations":[{"op":"remove","op":"add","href":"/articles/1"}]}`,
 			path:    "/atomic:operations/0/op",
 			code:    "duplicate-member",
+		},
+		"operation code is not string": {
+			payload: `{"atomic:operations":[{"op":1}]}`,
+			path:    "/atomic:operations/0/op",
+			code:    "type",
+		},
+		"operation ref is not object": {
+			payload: `{"atomic:operations":[{"op":"remove","ref":null}]}`,
+			path:    "/atomic:operations/0/ref",
+			code:    "type",
+		},
+		"unknown reference member": {
+			payload: `{"atomic:operations":[{"op":"remove","ref":{"type":"articles","id":"1","unknown":true}}]}`,
+			path:    "/atomic:operations/0/ref/unknown",
+			code:    "unknown-member",
+		},
+		"operation href is not string": {
+			payload: `{"atomic:operations":[{"op":"remove","href":1}]}`,
+			path:    "/atomic:operations/0/href",
+			code:    "type",
+		},
+		"operation data has scalar shape": {
+			payload: `{"atomic:operations":[{"op":"add","data":1}]}`,
+			path:    "/atomic:operations/0/data",
+			code:    "type",
+		},
+		"operation meta is not object": {
+			payload: `{"atomic:operations":[{"op":"remove","href":"/articles/1","meta":[]}]}`,
+			path:    "/atomic:operations/0/meta",
+			code:    "type",
+		},
+		"results is not array": {
+			payload: `{"atomic:results":null}`,
+			path:    "/atomic:results",
+			code:    "type",
+		},
+		"result is not object": {
+			payload: `{"atomic:results":[null]}`,
+			path:    "/atomic:results/0",
+			code:    "type",
+		},
+		"unknown result member": {
+			payload: `{"atomic:results":[{"unknown":true}]}`,
+			path:    "/atomic:results/0/unknown",
+			code:    "unknown-member",
+		},
+		"result data has scalar shape": {
+			payload: `{"atomic:results":[{"data":1}]}`,
+			path:    "/atomic:results/0/data",
+			code:    "type",
+		},
+		"result meta is not object": {
+			payload: `{"atomic:results":[{"meta":[]}]}`,
+			path:    "/atomic:results/0/meta",
+			code:    "type",
+		},
+		"errors is not array": {
+			payload: `{"errors":null}`,
+			path:    "/errors",
+			code:    "type",
+		},
+		"top-level meta is not object": {
+			payload: `{"meta":[]}`,
+			path:    "/meta",
+			code:    "type",
 		},
 	}
 
