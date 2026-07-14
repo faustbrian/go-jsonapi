@@ -216,13 +216,29 @@ The repository must ship with:
 - README
 - quickstart
 - architecture overview
+- full public API reference
 - supported-features matrix
 - conformance matrix
 - extension and profile support matrix
 - recommendations support matrix
 - extension guide
+- detailed adoption guide
+- end-to-end examples
+- use-case cookbook
+- FAQ
+- troubleshooting guide
 - migration notes
 - compatibility policy
+- versioning and release guide
+- contribution guide
+
+The documentation must be good enough that a new user can:
+
+- understand what the package guarantees
+- understand what parts of JSON:API are implemented
+- adopt the package in a real project without reverse-engineering internals
+- find concrete examples for common scenarios quickly
+- answer common integration questions without reading source code
 
 ## API Design Principles
 
@@ -263,6 +279,30 @@ proves it.
 Once `v1` is released, avoid redesigning core abstractions unless the existing
 API is genuinely defective.
 
+## Repository Automation And Quality Gates
+
+The repository must include GitHub Actions workflows for:
+
+- test execution
+- formatting checks
+- linting
+- static analysis
+- fuzzing or fuzz-target verification strategy
+- benchmark execution strategy
+- documentation validation where practical
+- dependency and security scanning
+- tagged release automation
+
+At minimum, pull requests must have automated checks that prove:
+
+- the code builds
+- tests pass
+- formatting is enforced
+- lint and static-analysis gates are green
+- documentation examples do not silently rot
+
+Release workflows must be explicit and reproducible.
+
 ## Open Source Standard
 
 This package should be good enough to open source without embarrassment.
@@ -300,8 +340,12 @@ That means:
 ### Phase 4: Open Source Readiness
 
 - finalize README and examples
+- finalize technical API documentation
+- finalize adoption documentation
+- finalize FAQ and troubleshooting content
 - publish roadmap
 - add contribution guidelines
+- finish GitHub Actions and release automation
 - tag first public release
 
 ## Acceptance Criteria
@@ -316,6 +360,8 @@ This goal is achieved when:
 - the public API is stable enough for real service adoption
 - conformance coverage is documented and verified
 - performance is reasonable for high-traffic APIs
+- GitHub Actions quality gates and release automation are in place
+- user-facing docs are complete enough for direct adoption
 - the repo is suitable for open source publication and external use
 
 ## Hard Warnings
