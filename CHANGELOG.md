@@ -9,6 +9,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A standardized OSS repository skeleton covering policy, documentation,
+  legal notices, Go tooling, pinned CI, security, and release automation.
 - Evidence-driven audit and hardening goal covering JSON:API 1.1, Atomic
   Operations, Cursor Pagination, negotiation, queries, and resource safety.
 - Strict JSON:API 1.1 document models, codecs, validation, links, errors,

@@ -1,35 +1,35 @@
-# Documentation
+# go-jsonapi Documentation
 
-Start with the [quickstart](quickstart.md), then use the guide matching your
-task.
+Use this index to evaluate specification coverage before production adoption.
 
-## Adopt the package
+## Start Here
 
 - [Quickstart](quickstart.md)
-- [Detailed adoption guide](adoption.md)
-- [End-to-end examples](examples.md)
-- [Use-case cookbook](cookbook.md)
+- [Adoption guide](adoption.md)
+- [API reference](api.md)
+- [Examples](examples.md)
 
-## Understand guarantees
+## Design And Operations
 
 - [Architecture](architecture.md)
-- [Public API reference](api-reference.md)
 - [Supported features](features.md)
 - [Conformance evidence](conformance.md)
 - [Extensions and profiles](extensions-and-profiles.md)
 - [JSON:API recommendations](recommendations.md)
-- [Compatibility policy](compatibility.md)
-- [Performance and resilience](performance.md)
-- [Hardening report](hardening-report.md)
+- [Compatibility](compatibility.md)
+- [Performance](performance.md)
+- [Security](security.md)
+- [Hardening](hardening.md)
 - [Threat model](threat-model.md)
 
-## Operate and maintain
+## Maintain And Troubleshoot
 
+- [Cookbook](cookbook.md)
 - [FAQ](faq.md)
 - [Troubleshooting](troubleshooting.md)
-- [Migration notes](migration.md)
-- [Release guide](releasing.md)
-- [Contributing](../CONTRIBUTING.md)
-- [Security policy](../SECURITY.md)
-- [Roadmap](../ROADMAP.md)
-- [MIT License](../LICENSE)
+- [Migration](migration.md)
+- [Releasing](releasing.md)
+
+## Repository Maintenance
+
+- [Shared repository standards](repository-standards.md)

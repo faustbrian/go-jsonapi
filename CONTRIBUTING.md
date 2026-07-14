@@ -1,86 +1,53 @@
 # Contributing
 
-Thank you for helping make `go-jsonapi` a dependable protocol foundation.
+## Before Opening A Change
 
-## Before opening a change
+Use an issue for changes affecting JSON:API documents, negotiation, queries, extensions, profiles, recommendations, and conformance. Explain the user problem,
+compatibility impact, and why the behavior belongs in this generic package.
 
-Use an issue for behavior changes that affect public APIs, wire output,
-validation, extensions, profiles, or compatibility. State which category the
-proposal belongs to:
-
-- normative JSON:API requirement;
-- official extension or profile requirement;
-- non-normative JSON:API recommendation;
-- application extension point;
-- implementation, performance, or documentation improvement.
-
-Do not present application conventions as JSON:API requirements.
-
-## Development setup
+## Development Setup
 
 Requirements:
 
-- Go 1.24 or later;
-- Git;
-- `golangci-lint` for the same lint gate used by CI.
-
-Clone the repository and run:
+- Go 1.25 or later
+- Git
+- `golangci-lint` v2
 
 ```sh
 go mod download
-go test ./...
-go vet ./...
+make check
 ```
 
-## Change requirements
+## Change Requirements
 
-- Add a regression test before fixing a defect.
-- Keep meaningful 100% production-code statement coverage.
-- Preserve deterministic wire output unless a documented breaking change is
-  intentional.
-- Update the conformance matrix for normative behavior changes.
-- Update examples and user documentation for public behavior changes.
-- Add an entry under `Unreleased` in `CHANGELOG.md`.
-- Keep dependencies minimal and explain every addition.
+- Add regression coverage before fixing a defect.
+- Maintain meaningful 100% production-code coverage.
+- Update public examples and documentation with behavior changes.
+- Update `GOAL.md` or `GOAL_HARDEN.md` when scope or acceptance criteria
+  change.
+- Add an `Unreleased` entry to `CHANGELOG.md`.
+- Explain every dependency addition, upgrade, or removal.
+- Update `NOTICE` and `THIRD_PARTY_NOTICES.md` when attribution changes.
 
-## Local verification
+## Package-Specific Review
+
+Separate normative JSON:API requirements, recommendations, official extensions, profiles, and application conventions. Every protocol claim MUST cite authoritative specification text and have conformance fixtures.
+
+## Local Verification
+
+Run the complete local gate:
 
 ```sh
-test -z "$(gofmt -l .)"
-go vet ./...
-go test ./...
-go test ./... -coverprofile=coverage.out
-go tool cover -func=coverage.out
-go test ./... -run '^Example'
-go test ./... -run '^$' -bench . -benchtime=100ms
+make check
 ```
 
-Run each fuzz target for changes near its boundary:
-
-```sh
-go test ./... -run '^$' -fuzz '^FuzzUnmarshal$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzUnmarshalAtomic$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzParseQuery$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzCursorPaginationQuery$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzNegotiation$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzConstructedDocumentValidation$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzMemberRegistry$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzCursorMetadata$' -fuzztime=30s
-go test ./... -run '^$' -fuzz '^FuzzMarshalUnmarshalRoundTrip$' -fuzztime=30s
-```
-
-## Commit and pull request style
+## Commits And Pull Requests
 
 Use focused conventional commits with a body explaining why the change is
-needed. Pull requests should include:
+needed. Pull requests must describe compatibility impact, tests, verification
+commands and results, documentation updates, and changelog updates.
 
-- the protocol requirement or problem being solved;
-- compatibility and wire-format impact;
-- tests and fixtures added;
-- verification commands and results;
-- documentation and changelog updates.
-
-## Reporting security issues
+## Reporting Security Issues
 
 Do not open a public issue for a suspected vulnerability. Follow
 [SECURITY.md](SECURITY.md).

@@ -2,20 +2,30 @@
 set -euo pipefail
 
 required=(
-  LICENSE
-  README.md
+  .gitattributes
+  .gitignore
+  .golangci.yml
+  AGENTS.md
   CHANGELOG.md
+  CLAUDE.md
+  CODE_OF_CONDUCT.md
   CONTRIBUTING.md
+  GOAL.md
+  GOAL_HARDEN.md
+  LICENSE
+  Makefile
+  NOTICE
+  README.md
+  ROADMAP.md
   SECURITY.md
+  THIRD_PARTY_NOTICES.md
+  llms.txt
+  llms-full.txt
   docs/README.md
   docs/quickstart.md
-  docs/architecture.md
-  docs/api-reference.md
-  docs/features.md
-  docs/conformance.md
-  docs/extensions-and-profiles.md
-  docs/recommendations.md
   docs/adoption.md
+  docs/api.md
+  docs/architecture.md
   docs/examples.md
   docs/cookbook.md
   docs/faq.md
@@ -23,11 +33,20 @@ required=(
   docs/migration.md
   docs/compatibility.md
   docs/performance.md
+  docs/hardening.md
+  docs/security.md
   docs/releasing.md
+  docs/repository-standards.md
+  docs/conformance.md
+  docs/extensions-and-profiles.md
+  docs/features.md
+  docs/recommendations.md
+  docs/threat-model.md
 )
+
 for file in "${required[@]}"; do
   if [[ ! -s "$file" ]]; then
-    echo "required documentation is missing or empty: $file" >&2
+    echo "required repository file is missing or empty: $file" >&2
     exit 1
   fi
 done
@@ -38,7 +57,15 @@ import re
 
 for document in Path(".").rglob("*.md"):
     content = document.read_text(encoding="utf-8")
-    for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", content):
+    prose = []
+    in_fence = False
+    for line in content.splitlines():
+        if line.lstrip().startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            prose.append(line)
+    for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", "\n".join(prose)):
         if target.startswith(("http://", "https://", "mailto:", "#")):
             continue
         relative = target.split("#", 1)[0]
@@ -48,7 +75,8 @@ for document in Path(".").rglob("*.md"):
         if not resolved.exists():
             raise SystemExit(f"broken relative link in {document}: {target}")
 
-print("all relative Markdown links resolve")
+print("all required files exist and relative Markdown links resolve")
 PY
 
+python3 scripts/generate-llms.py --check
 go test ./... -run '^Example'

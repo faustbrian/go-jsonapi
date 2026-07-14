@@ -125,4 +125,4 @@ when no acceptable response representation exists.
 - [Adoption guide](adoption.md) for endpoint design and error mapping
 - [Examples](examples.md) for complete flows
 - [Extensions and profiles](extensions-and-profiles.md)
-- [API reference](api-reference.md)
+- [API reference](api.md)
