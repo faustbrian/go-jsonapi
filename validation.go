@@ -104,10 +104,10 @@ const (
 )
 
 func (validator *documentValidator) validateDocument(document Document) {
-	if document.Data == nil && len(document.Errors) == 0 && document.Meta == nil {
+	if document.Data == nil && document.Errors == nil && document.Meta == nil {
 		validator.add("", "required", "document must contain data, errors, or meta")
 	}
-	if document.Data != nil && len(document.Errors) > 0 {
+	if document.Data != nil && document.Errors != nil {
 		validator.add("/errors", "conflict", "data and errors must not coexist")
 	}
 	if document.Data == nil && document.Included != nil {
@@ -117,7 +117,7 @@ func (validator *documentValidator) validateDocument(document Document) {
 		if document.Data == nil {
 			validator.add("/data", "required", "request document must contain data")
 		}
-		if len(document.Errors) > 0 {
+		if document.Errors != nil {
 			validator.add("/errors", "forbidden", "request document must not contain errors")
 		}
 	}

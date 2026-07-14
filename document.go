@@ -23,6 +23,43 @@ type Document struct {
 	Meta     Meta             `json:"meta,omitempty"`
 }
 
+// MarshalJSON implements json.Marshaler while preserving explicitly empty
+// top-level arrays and objects.
+func (document Document) MarshalJSON() ([]byte, error) {
+	var links *Links
+	if document.Links != nil {
+		links = &document.Links
+	}
+	var included *[]ResourceObject
+	if document.Included != nil {
+		included = &document.Included
+	}
+	var errorsMember *[]ErrorObject
+	if document.Errors != nil {
+		errorsMember = &document.Errors
+	}
+	var meta *Meta
+	if document.Meta != nil {
+		meta = &document.Meta
+	}
+
+	return json.Marshal(struct {
+		JSONAPI  *JSONAPI          `json:"jsonapi,omitempty"`
+		Links    *Links            `json:"links,omitempty"`
+		Data     *PrimaryData      `json:"data,omitempty"`
+		Included *[]ResourceObject `json:"included,omitempty"`
+		Errors   *[]ErrorObject    `json:"errors,omitempty"`
+		Meta     *Meta             `json:"meta,omitempty"`
+	}{
+		JSONAPI:  document.JSONAPI,
+		Links:    links,
+		Data:     document.Data,
+		Included: included,
+		Errors:   errorsMember,
+		Meta:     meta,
+	})
+}
+
 // JSONAPI describes the JSON:API implementation and applied extensions and
 // profiles.
 type JSONAPI struct {
@@ -30,6 +67,35 @@ type JSONAPI struct {
 	Ext     []string `json:"ext,omitempty"`
 	Profile []string `json:"profile,omitempty"`
 	Meta    Meta     `json:"meta,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler while preserving explicitly empty
+// extension, profile, and meta members.
+func (object JSONAPI) MarshalJSON() ([]byte, error) {
+	var extensions *[]string
+	if object.Ext != nil {
+		extensions = &object.Ext
+	}
+	var profiles *[]string
+	if object.Profile != nil {
+		profiles = &object.Profile
+	}
+	var meta *Meta
+	if object.Meta != nil {
+		meta = &object.Meta
+	}
+
+	return json.Marshal(struct {
+		Version string    `json:"version,omitempty"`
+		Ext     *[]string `json:"ext,omitempty"`
+		Profile *[]string `json:"profile,omitempty"`
+		Meta    *Meta     `json:"meta,omitempty"`
+	}{
+		Version: object.Version,
+		Ext:     extensions,
+		Profile: profiles,
+		Meta:    meta,
+	})
 }
 
 // ResourceObject is a JSON:API resource object.
@@ -43,12 +109,72 @@ type ResourceObject struct {
 	Meta          Meta          `json:"meta,omitempty"`
 }
 
+// MarshalJSON implements json.Marshaler while preserving explicitly empty
+// resource containers.
+func (resource ResourceObject) MarshalJSON() ([]byte, error) {
+	var attributes *Attributes
+	if resource.Attributes != nil {
+		attributes = &resource.Attributes
+	}
+	var relationships *Relationships
+	if resource.Relationships != nil {
+		relationships = &resource.Relationships
+	}
+	var links *Links
+	if resource.Links != nil {
+		links = &resource.Links
+	}
+	var meta *Meta
+	if resource.Meta != nil {
+		meta = &resource.Meta
+	}
+
+	return json.Marshal(struct {
+		Type          string         `json:"type"`
+		ID            string         `json:"id,omitempty"`
+		LID           string         `json:"lid,omitempty"`
+		Attributes    *Attributes    `json:"attributes,omitempty"`
+		Relationships *Relationships `json:"relationships,omitempty"`
+		Links         *Links         `json:"links,omitempty"`
+		Meta          *Meta          `json:"meta,omitempty"`
+	}{
+		Type:          resource.Type,
+		ID:            resource.ID,
+		LID:           resource.LID,
+		Attributes:    attributes,
+		Relationships: relationships,
+		Links:         links,
+		Meta:          meta,
+	})
+}
+
 // Identifier identifies a resource by type and either server or local ID.
 type Identifier struct {
 	Type string `json:"type"`
 	ID   string `json:"id,omitempty"`
 	LID  string `json:"lid,omitempty"`
 	Meta Meta   `json:"meta,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler while preserving an explicitly empty
+// identifier meta object.
+func (identifier Identifier) MarshalJSON() ([]byte, error) {
+	var meta *Meta
+	if identifier.Meta != nil {
+		meta = &identifier.Meta
+	}
+
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		ID   string `json:"id,omitempty"`
+		LID  string `json:"lid,omitempty"`
+		Meta *Meta  `json:"meta,omitempty"`
+	}{
+		Type: identifier.Type,
+		ID:   identifier.ID,
+		LID:  identifier.LID,
+		Meta: meta,
+	})
 }
 
 type primaryDataKind uint8
@@ -106,6 +232,29 @@ type Relationship struct {
 	Links Links             `json:"links,omitempty"`
 	Data  *RelationshipData `json:"data,omitempty"`
 	Meta  Meta              `json:"meta,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler while preserving explicitly empty
+// relationship links and meta objects.
+func (relationship Relationship) MarshalJSON() ([]byte, error) {
+	var links *Links
+	if relationship.Links != nil {
+		links = &relationship.Links
+	}
+	var meta *Meta
+	if relationship.Meta != nil {
+		meta = &relationship.Meta
+	}
+
+	return json.Marshal(struct {
+		Links *Links            `json:"links,omitempty"`
+		Data  *RelationshipData `json:"data,omitempty"`
+		Meta  *Meta             `json:"meta,omitempty"`
+	}{
+		Links: links,
+		Data:  relationship.Data,
+		Meta:  meta,
+	})
 }
 
 type relationshipDataKind uint8
@@ -241,6 +390,11 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		return json.Marshal(link.href)
 	}
 
+	var meta *Meta
+	if link.meta != nil {
+		meta = &link.meta
+	}
+
 	return json.Marshal(struct {
 		Href        string `json:"href"`
 		Rel         string `json:"rel,omitempty"`
@@ -248,7 +402,7 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		Title       string `json:"title,omitempty"`
 		Type        string `json:"type,omitempty"`
 		Hreflang    any    `json:"hreflang,omitempty"`
-		Meta        Meta   `json:"meta,omitempty"`
+		Meta        *Meta  `json:"meta,omitempty"`
 	}{
 		Href:        link.href,
 		Rel:         link.rel,
@@ -256,7 +410,7 @@ func (link Link) MarshalJSON() ([]byte, error) {
 		Title:       link.title,
 		Type:        link.targetType,
 		Hreflang:    link.hreflangValue(),
-		Meta:        link.meta,
+		Meta:        meta,
 	})
 }
 
@@ -284,6 +438,39 @@ type ErrorObject struct {
 	Detail string       `json:"detail,omitempty"`
 	Source *ErrorSource `json:"source,omitempty"`
 	Meta   Meta         `json:"meta,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler while preserving explicitly empty
+// error links and meta objects.
+func (apiError ErrorObject) MarshalJSON() ([]byte, error) {
+	var links *Links
+	if apiError.Links != nil {
+		links = &apiError.Links
+	}
+	var meta *Meta
+	if apiError.Meta != nil {
+		meta = &apiError.Meta
+	}
+
+	return json.Marshal(struct {
+		ID     string       `json:"id,omitempty"`
+		Links  *Links       `json:"links,omitempty"`
+		Status string       `json:"status,omitempty"`
+		Code   string       `json:"code,omitempty"`
+		Title  string       `json:"title,omitempty"`
+		Detail string       `json:"detail,omitempty"`
+		Source *ErrorSource `json:"source,omitempty"`
+		Meta   *Meta        `json:"meta,omitempty"`
+	}{
+		ID:     apiError.ID,
+		Links:  links,
+		Status: apiError.Status,
+		Code:   apiError.Code,
+		Title:  apiError.Title,
+		Detail: apiError.Detail,
+		Source: apiError.Source,
+		Meta:   meta,
+	})
 }
 
 // ErrorSource identifies the source of an error in a request.
