@@ -5,6 +5,7 @@ import (
 	"mime"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -140,6 +141,7 @@ func (validator *documentValidator) validateDocument(document Document) {
 		validator.validatePrimaryData(document.Data, "/data", identityEither, false, identityEither)
 	}
 	validator.validateIncluded(document, validator.includedIdentity())
+	validator.validateDocumentIdentity(document)
 	for index, apiError := range document.Errors {
 		validator.validateError(apiError, "/errors/"+strconv.Itoa(index))
 	}
@@ -161,11 +163,27 @@ func (validator *documentValidator) includedIdentity() identityRequirement {
 }
 
 func (validator *documentValidator) validateJSONAPI(object JSONAPI) {
-	for index, extension := range object.Ext {
-		validator.validateURL(extension, "/jsonapi/ext/"+strconv.Itoa(index))
-	}
-	for index, profile := range object.Profile {
-		validator.validateURL(profile, "/jsonapi/profile/"+strconv.Itoa(index))
+	validator.validateURIList(object.Ext, "/jsonapi/ext")
+	validator.validateURIList(object.Profile, "/jsonapi/profile")
+}
+
+func (validator *documentValidator) validateURIList(values []string, path string) {
+	seen := make(map[string]int, len(values))
+	for index, value := range values {
+		itemPath := path + "/" + strconv.Itoa(index)
+		parsed, err := url.Parse(value)
+		if value == "" || err != nil || !parsed.IsAbs() {
+			validator.add(itemPath, "uri", "value must be an absolute URI")
+		}
+		if previous, exists := seen[value]; exists {
+			validator.add(
+				itemPath,
+				"duplicate-uri",
+				fmt.Sprintf("URI duplicates item at index %d", previous),
+			)
+		} else {
+			seen[value] = index
+		}
 	}
 }
 
@@ -474,13 +492,7 @@ func (validator *documentValidator) validateIncluded(
 		path := "/included/" + strconv.Itoa(index)
 		validator.validateResource(resource, path, identity, false, identity)
 		key := resourceKey(resource.Type, resource.ID, resource.LID)
-		if previous, exists := included[key]; exists {
-			validator.add(
-				path,
-				"duplicate-resource",
-				fmt.Sprintf("resource duplicates included resource at index %d", previous),
-			)
-		} else {
+		if _, exists := included[key]; !exists {
 			included[key] = index
 		}
 	}
@@ -506,6 +518,150 @@ func (validator *documentValidator) validateIncluded(
 				"full-linkage",
 				"included resource is not linked from primary data",
 			)
+		}
+	}
+}
+
+type resourceObservation struct {
+	resource ResourceObject
+	path     string
+}
+
+type identityObservation struct {
+	resourceType string
+	id           string
+	lid          string
+	path         string
+}
+
+func (validator *documentValidator) validateDocumentIdentity(document Document) {
+	resources := documentResources(document)
+	canonical := make(map[string]string, len(resources))
+	var identities []identityObservation
+	for _, observation := range resources {
+		resource := observation.resource
+		if resource.Type != "" && (resource.ID != "" || resource.LID != "") {
+			key := resourceKey(resource.Type, resource.ID, resource.LID)
+			if previous, exists := canonical[key]; exists {
+				validator.add(
+					observation.path,
+					"duplicate-resource",
+					"resource duplicates canonical object at "+previous,
+				)
+			} else {
+				canonical[key] = observation.path
+			}
+		}
+		identities = append(identities, identityObservation{
+			resourceType: resource.Type,
+			id:           resource.ID,
+			lid:          resource.LID,
+			path:         observation.path,
+		})
+		identities = append(identities, relationshipIdentityObservations(
+			resource.Relationships,
+			observation.path+"/relationships",
+		)...)
+	}
+	validator.validateLocalIdentities(identities)
+}
+
+func documentResources(document Document) []resourceObservation {
+	var resources []resourceObservation
+	if document.Data != nil {
+		switch document.Data.kind {
+		case primaryDataOne:
+			if document.Data.one != nil {
+				resources = append(resources, resourceObservation{*document.Data.one, "/data"})
+			}
+		case primaryDataMany:
+			for index, resource := range document.Data.many {
+				resources = append(resources, resourceObservation{
+					resource: resource,
+					path:     "/data/" + strconv.Itoa(index),
+				})
+			}
+		}
+	}
+	for index, resource := range document.Included {
+		resources = append(resources, resourceObservation{
+			resource: resource,
+			path:     "/included/" + strconv.Itoa(index),
+		})
+	}
+
+	return resources
+}
+
+func relationshipIdentityObservations(
+	relationships Relationships,
+	path string,
+) []identityObservation {
+	names := make([]string, 0, len(relationships))
+	for name := range relationships {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var observations []identityObservation
+	for _, name := range names {
+		data := relationships[name].Data
+		if data == nil || data.kind == relationshipDataNull {
+			continue
+		}
+		dataPath := path + "/" + escapePointerToken(name) + "/data"
+		if data.kind == relationshipDataOne && data.one != nil {
+			observations = append(observations, identityFromIdentifier(*data.one, dataPath))
+		}
+		if data.kind == relationshipDataMany {
+			for index, identifier := range data.many {
+				observations = append(
+					observations,
+					identityFromIdentifier(identifier, dataPath+"/"+strconv.Itoa(index)),
+				)
+			}
+		}
+	}
+
+	return observations
+}
+
+func identityFromIdentifier(identifier Identifier, path string) identityObservation {
+	return identityObservation{
+		resourceType: identifier.Type,
+		id:           identifier.ID,
+		lid:          identifier.LID,
+		path:         path,
+	}
+}
+
+func (validator *documentValidator) validateLocalIdentities(observations []identityObservation) {
+	byID := make(map[string]identityObservation)
+	byLID := make(map[string]identityObservation)
+	for _, observation := range observations {
+		if observation.resourceType == "" || observation.lid == "" {
+			continue
+		}
+		if observation.id != "" {
+			idKey := observation.resourceType + "\x00" + observation.id
+			if previous, exists := byID[idKey]; exists && previous.lid != observation.lid {
+				validator.add(
+					observation.path+"/lid",
+					"local-identity",
+					"lid differs from another representation of this resource",
+				)
+			} else {
+				byID[idKey] = observation
+			}
+			lidKey := observation.resourceType + "\x00" + observation.lid
+			if previous, exists := byLID[lidKey]; exists && previous.id != observation.id {
+				validator.add(
+					observation.path+"/lid",
+					"local-identity",
+					"lid identifies a different resource id elsewhere in the document",
+				)
+			} else {
+				byLID[lidKey] = observation
+			}
 		}
 	}
 }
