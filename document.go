@@ -445,14 +445,15 @@ func (link Link) hreflangValue() any {
 
 // ErrorObject describes one JSON:API error.
 type ErrorObject struct {
-	ID     string       `json:"id,omitempty"`
-	Links  Links        `json:"links,omitempty"`
-	Status string       `json:"status,omitempty"`
-	Code   string       `json:"code,omitempty"`
-	Title  string       `json:"title,omitempty"`
-	Detail string       `json:"detail,omitempty"`
-	Source *ErrorSource `json:"source,omitempty"`
-	Meta   Meta         `json:"meta,omitempty"`
+	ID                string       `json:"id,omitempty"`
+	Links             Links        `json:"links,omitempty"`
+	Status            string       `json:"status,omitempty"`
+	Code              string       `json:"code,omitempty"`
+	Title             string       `json:"title,omitempty"`
+	Detail            string       `json:"detail,omitempty"`
+	Source            *ErrorSource `json:"source,omitempty"`
+	Meta              Meta         `json:"meta,omitempty"`
+	AdditionalMembers Members      `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -467,7 +468,7 @@ func (apiError ErrorObject) MarshalJSON() ([]byte, error) {
 		meta = &apiError.Meta
 	}
 
-	return json.Marshal(struct {
+	core := struct {
 		ID     string       `json:"id,omitempty"`
 		Links  *Links       `json:"links,omitempty"`
 		Status string       `json:"status,omitempty"`
@@ -485,7 +486,9 @@ func (apiError ErrorObject) MarshalJSON() ([]byte, error) {
 		Detail: apiError.Detail,
 		Source: apiError.Source,
 		Meta:   meta,
-	})
+	}
+
+	return marshalObjectWithMembers(core, apiError.AdditionalMembers)
 }
 
 // ErrorSource identifies the source of an error in a request.

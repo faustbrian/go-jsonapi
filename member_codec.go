@@ -22,6 +22,7 @@ const (
 	RelationshipMemberScope
 	IdentifierMemberScope
 	JSONAPIMemberScope
+	ErrorMemberScope
 )
 
 // MemberDefinition declares one extension member and its optional value
@@ -81,7 +82,8 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 				definition.Scope != ResourceMemberScope &&
 				definition.Scope != RelationshipMemberScope &&
 				definition.Scope != IdentifierMemberScope &&
-				definition.Scope != JSONAPIMemberScope {
+				definition.Scope != JSONAPIMemberScope &&
+				definition.Scope != ErrorMemberScope {
 				return nil, fmt.Errorf("unsupported member scope: %d", definition.Scope)
 			}
 			prefix := extension.Namespace + ":"
@@ -167,6 +169,15 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 		root["included"] = sanitized
 		includedMembers = extracted
 	}
+	var errorMembers []Members
+	if raw, exists := root["errors"]; exists {
+		sanitized, extracted, sanitizeErr := codec.sanitizeErrors(raw, "/errors")
+		if sanitizeErr != nil {
+			return Document{}, sanitizeErr
+		}
+		root["errors"] = sanitized
+		errorMembers = extracted
+	}
 	sanitized, err := json.Marshal(root)
 	if err != nil {
 		return Document{}, decodeFailure("", "syntax", "could not normalize document", err)
@@ -185,6 +196,11 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 			attachResourceMembers(&document.Included[index], includedMembers[index])
 		}
 	}
+	for index := range document.Errors {
+		if index < len(errorMembers) {
+			document.Errors[index].AdditionalMembers = errorMembers[index]
+		}
+	}
 	if err := validateDocumentMembers(document, codec.members); err != nil {
 		return Document{}, err
 	}
@@ -193,6 +209,31 @@ func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	}
 
 	return document, nil
+}
+
+func (codec *Codec) sanitizeErrors(
+	raw json.RawMessage,
+	path string,
+) (json.RawMessage, []Members, error) {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil || items == nil {
+		return nil, nil, decodeFailure(path, "type", "errors must be an array", err)
+	}
+	members := make([]Members, len(items))
+	for index, item := range items {
+		sanitized, extracted, err := codec.sanitizeObject(
+			item,
+			ErrorMemberScope,
+			path+"/"+fmt.Sprintf("%d", index),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		items[index] = sanitized
+		members[index] = extracted
+	}
+	sanitized, err := json.Marshal(items)
+	return sanitized, members, err
 }
 
 func (codec *Codec) sanitizeObject(
@@ -495,6 +536,14 @@ func validateDocumentMembers(
 			document.JSONAPI.AdditionalMembers,
 			registry[JSONAPIMemberScope],
 			"/jsonapi",
+		)
+	}
+	for index, apiError := range document.Errors {
+		validateScopedMembers(
+			&validator,
+			apiError.AdditionalMembers,
+			registry[ErrorMemberScope],
+			"/errors/"+fmt.Sprintf("%d", index),
 		)
 	}
 	for _, observation := range documentResources(document) {

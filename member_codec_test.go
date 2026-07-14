@@ -480,3 +480,63 @@ func TestCoreCodecRejectsJSONAPIObjectExtensionMember(t *testing.T) {
 		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
 	}
 }
+
+func TestCodecRoundTripsErrorObjectExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{Extensions: []ExtensionDefinition{{
+		URI:       "https://example.com/ext/version",
+		Namespace: "version",
+		Members: []MemberDefinition{{
+			Scope: ErrorMemberScope,
+			Name:  "version:retryable",
+		}},
+	}}})
+	if err != nil {
+		t.Fatalf("construct codec: %v", err)
+	}
+
+	payload := []byte(`{"errors":[{"status":"409","version:retryable":true}]}`)
+	document, err := codec.Unmarshal(payload)
+	if err != nil {
+		t.Fatalf("decode error extension document: %v", err)
+	}
+	if len(document.Errors) != 1 ||
+		document.Errors[0].AdditionalMembers["version:retryable"] != true {
+		t.Fatalf("error member was not preserved: %#v", document.Errors)
+	}
+	encoded, err := codec.Marshal(document)
+	if err != nil {
+		t.Fatalf("encode error extension document: %v", err)
+	}
+	if string(encoded) != string(payload) {
+		t.Fatalf("unexpected round trip: got %s, want %s", encoded, payload)
+	}
+}
+
+func TestCoreCodecRejectsErrorObjectExtensionMember(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`{"errors":[{"status":"409","version:retryable":true}]}`)
+	_, err := Unmarshal(payload)
+	var decodeError *DecodeError
+	if !errors.As(err, &decodeError) ||
+		decodeError.Path != "/errors/0/version:retryable" ||
+		decodeError.Code != "unknown-member" {
+		t.Fatalf("unexpected core decode error: %T %#v", err, decodeError)
+	}
+
+	_, err = Marshal(Document{Errors: []ErrorObject{{
+		Status:            "409",
+		AdditionalMembers: Members{"version:retryable": true},
+	}}})
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) ||
+		!hasViolation(
+			validationError,
+			"/errors/0/version:retryable",
+			"unregistered-member",
+		) {
+		t.Fatalf("unexpected core marshal error: %T %#v", err, validationError)
+	}
+}
