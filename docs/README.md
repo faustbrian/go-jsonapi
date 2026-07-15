@@ -12,6 +12,7 @@ Use this index to evaluate specification coverage before production adoption.
 ## Design And Operations
 
 - [Architecture](architecture.md)
+- [Go safety and concurrency](go-safety-and-concurrency.md)
 - [Supported features](features.md)
 - [Conformance evidence](conformance.md)
 - [Extensions and profiles](extensions-and-profiles.md)

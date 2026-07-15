@@ -20,7 +20,7 @@ each claim to code and adversarial tests.
 - Official JSON:API recommendations, clearly separated from normative rules.
 - Relevant HTTP semantics and media-type specifications.
 - Go's `encoding/json`, `net/http`, `net/url`, and error contracts.
-- The repository's `GOAL.md`, `AGENTS.md`, matrices, public API, fixtures,
+- The repository's `.ai/GOAL.md`, `AGENTS.md`, matrices, public API, fixtures,
   docs, tests, fuzzers, benchmarks, and changelog.
 
 Use primary sources and stable section links. Label every requirement as core,
