@@ -153,15 +153,17 @@ func (negotiator *Negotiator) NegotiateAccept(header string) (NegotiatedMedia, e
 		return NegotiatedMedia{}, negotiationFailure(406, "limit", "Accept exceeds the candidate limit")
 	}
 	ranges := make([]acceptCandidate, 0, len(candidates))
-	representations := make(map[string]acceptCandidate)
+	representations := make([]acceptCandidate, 0, len(candidates))
+	seenRepresentations := make(map[string]struct{}, len(candidates))
 	for _, raw := range candidates {
 		candidate, ok := negotiator.acceptCandidate(raw)
 		if !ok {
 			continue
 		}
 		ranges = append(ranges, candidate)
-		if _, exists := representations[candidate.contentType]; !exists {
-			representations[candidate.contentType] = candidate
+		if _, exists := seenRepresentations[candidate.contentType]; !exists {
+			seenRepresentations[candidate.contentType] = struct{}{}
+			representations = append(representations, candidate)
 		}
 	}
 	var selected *acceptCandidate

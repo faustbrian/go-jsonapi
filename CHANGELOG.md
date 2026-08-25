@@ -9,6 +9,9 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Preserve Accept-header order while evaluating unique representations so
+  quality selection and canonical equal-quality tie-breaking are deterministic.
+
 - Make metadata at-member filtering deterministic under mutation verification
   while preserving all ordinary metadata members.
 
