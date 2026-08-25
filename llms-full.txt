@@ -22,7 +22,7 @@ revision.
 ## Installation
 
 ```sh
-go get github.com/faustbrian/golib/pkg/jsonapi
+go get github.com/faustbrian/go-jsonapi
 ```
 
 ## Quickstart
@@ -501,7 +501,7 @@ document and a valid 204 response.
 
 This guide groups the complete exported surface by purpose. Symbol comments in
 the source are the canonical field-level reference and are rendered by
-`go doc github.com/faustbrian/golib/pkg/jsonapi`.
+`go doc github.com/faustbrian/go-jsonapi`.
 
 ## Core documents
 
@@ -1980,7 +1980,7 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Decouple validated changelog release dates from the wall-clock day on which
   a prepared tag is published.
 
-[Unreleased]: https://github.com/faustbrian/golib/commits/main/pkg/jsonapi
+[Unreleased]: https://github.com/faustbrian/go-jsonapi/commits/main
 
 ## Source: docs/conformance.md
 

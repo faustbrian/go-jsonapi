@@ -1,14 +1,24 @@
 # jsonapi
 
+[![CI](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-jsonapi.svg)](https://pkg.go.dev/github.com/faustbrian/go-jsonapi)
+[![Release](https://img.shields.io/github/v/release/faustbrian/go-jsonapi?sort=semver)](https://github.com/faustbrian/go-jsonapi/releases)
+[![Go](https://img.shields.io/badge/go-1.26.6-00ADD8?logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 `jsonapi` is a strict, framework-agnostic implementation of JSON:API 1.1,
 the official Atomic Operations extension, the official Cursor Pagination
 profile, and the published JSON:API recommendations.
 
 ## Status
 
-The package is pre-v1. Its supported protocol surface is conformance-tested and
+The package has a stable v1 API. Its supported protocol surface is conformance-tested and
 production code is held to meaningful 100% statement coverage. Read the
-[compatibility policy](docs/compatibility.md) before adopting an unreleased
+[compatibility policy](docs/compatibility.md) before adopting a
 revision.
 
 ## Requirements
@@ -18,7 +28,7 @@ revision.
 ## Installation
 
 ```sh
-go get github.com/faustbrian/golib/pkg/jsonapi
+go get github.com/faustbrian/go-jsonapi
 ```
 
 ## Quickstart

@@ -1,4 +1,4 @@
-module github.com/faustbrian/golib/pkg/jsonapi
+module github.com/faustbrian/go-jsonapi
 
 go 1.26.6
 

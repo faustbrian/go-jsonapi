@@ -62,5 +62,5 @@ document-level semantic validator.
 
 ## Is the API stable?
 
-The repository is pre-v1 until `v1.0.0` is tagged. See the
+The repository starts its stable release history at `v1.0.0`. See the
 [compatibility policy](compatibility.md).

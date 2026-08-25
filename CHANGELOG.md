@@ -7,6 +7,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-25
+
 ### Documentation
 
 - Replace obsolete standalone-repository links and workflow claims with
@@ -21,6 +23,7 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Publish the module from its standalone `github.com/faustbrian/go-jsonapi` identity while preserving its documented API and behavior.
 - Upgrade `golang.org/x/text` to v0.41.0 so the dependency graph no longer
   contains GO-2026-5970.
 - Pin specification-derived JSON:API fixtures and make security, resource,
@@ -165,4 +168,5 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Decouple validated changelog release dates from the wall-clock day on which
   a prepared tag is published.
 
-[Unreleased]: https://github.com/faustbrian/golib/commits/main/pkg/jsonapi
+[Unreleased]: https://github.com/faustbrian/go-jsonapi/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/faustbrian/go-jsonapi/releases/tag/v1.0.0

@@ -2,7 +2,7 @@
 
 This guide groups the complete exported surface by purpose. Symbol comments in
 the source are the canonical field-level reference and are rendered by
-`go doc github.com/faustbrian/golib/pkg/jsonapi`.
+`go doc github.com/faustbrian/go-jsonapi`.
 
 ## Core documents
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	jsonapi "github.com/faustbrian/golib/pkg/jsonapi"
+	jsonapi "github.com/faustbrian/go-jsonapi"
 )
 
 func ExampleMarshal() {
