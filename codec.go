@@ -763,10 +763,9 @@ func decodeMeta(raw json.RawMessage, path string) (Meta, error) {
 
 	meta := make(Meta, len(object))
 	for name, value := range object {
-		if strings.HasPrefix(name, "@") {
-			continue
+		if !strings.HasPrefix(name, "@") {
+			meta[name] = stripAtMembers(decodeValidValue(value))
 		}
-		meta[name] = stripAtMembers(decodeValidValue(value))
 	}
 
 	return meta, nil

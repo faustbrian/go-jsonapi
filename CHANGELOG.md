@@ -7,6 +7,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Make metadata at-member filtering deterministic under mutation verification
+  while preserving all ordinary metadata members.
+
 ### Changed
 
 - Validate action pinning from the standalone repository root and leave
