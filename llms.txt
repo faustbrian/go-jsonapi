@@ -1,4 +1,4 @@
-# jsonapi
+# go-jsonapi
 
 > Documentation map for package users, adopters, operators, and contributors.
 
