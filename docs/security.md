@@ -22,4 +22,4 @@ responsibilities.
 
 Follow the repository [security policy](../SECURITY.md) for private
 vulnerability reporting. See the [threat model](threat-model.md) and
-[hardening evidence](hardening.md) for the maintained security assumptions.
+[conformance contract](conformance.md) for the maintained security assumptions.

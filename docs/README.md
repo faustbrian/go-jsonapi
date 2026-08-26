@@ -1,15 +1,15 @@
-# jsonapi Documentation
+# Documentation
 
 Use this index to evaluate specification coverage before production adoption.
 
-## Start Here
+## Getting started
 
 - [Quickstart](quickstart.md)
-- [Adoption guide](adoption.md)
+- [When to use this package](adoption.md)
 - [API reference](api.md)
 - [Examples](examples.md)
 
-## Design And Operations
+## Specifications and design
 
 - [Architecture](architecture.md)
 - [Go safety and concurrency](go-safety-and-concurrency.md)
@@ -21,10 +21,9 @@ Use this index to evaluate specification coverage before production adoption.
 - [Compatibility](compatibility.md)
 - [Performance](performance.md)
 - [Security](security.md)
-- [Hardening](hardening.md)
 - [Threat model](threat-model.md)
 
-## Maintain And Troubleshoot
+## Operations and migration
 
 - [Cookbook](cookbook.md)
 - [FAQ](faq.md)
@@ -32,6 +31,8 @@ Use this index to evaluate specification coverage before production adoption.
 - [Migration](migration.md)
 - [Releasing](releasing.md)
 
-## Repository Maintenance
+## Maintainers
 
-- [Shared repository standards](repository-standards.md)
+- [Repository standards](repository-standards.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Release history](../CHANGELOG.md)
