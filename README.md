@@ -74,13 +74,10 @@ language, cursor encoding, authentication policy, or domain-error mapping.
 ## Documentation
 
 Start with the [documentation index](docs/README.md), [quickstart](docs/quickstart.md),
-[adoption guide](docs/adoption.md), and [API reference](docs/api.md). The
+[guide for adopting the package](docs/adoption.md), and [API reference](docs/api.md). The
 [conformance matrix](docs/conformance.md), [extensions and profiles](docs/extensions-and-profiles.md),
 [recommendations](docs/recommendations.md), [specification decision register](docs/specification-decisions.md),
-and [hardening evidence](docs/hardening.md) define the supported protocol
-surface.
-
-AI tools can use [llms.txt](llms.txt) and [llms-full.txt](llms-full.txt).
+and [security model](docs/security.md) define the supported protocol surface.
 Release history is maintained in [CHANGELOG.md](CHANGELOG.md).
 
 ## Development
@@ -108,7 +105,9 @@ before processing untrusted input.
 third-party policy are recorded in [NOTICE](NOTICE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Ecosystem
+## Related packages
 
-Use the [Golib documentation portal](https://github.com/faustbrian/golib/blob/main/docs/index.md)
-to choose companion packages, supported stacks, recipes, and operations guidance.
+- [JSON-RPC](https://github.com/faustbrian/go-jsonrpc) is suited to explicit
+  method calls and internal service APIs.
+- [OpenAPI](https://github.com/faustbrian/go-openapi) models and validates
+  OpenAPI descriptions.
