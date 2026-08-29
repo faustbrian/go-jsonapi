@@ -7,6 +7,11 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Use the centrally maintained Go library verification and CI contract at
+  `go-library-tools` v1.0.6.
+
 ### Documentation
 
 - Clarify how shared safety-policy updates are coordinated across standalone
