@@ -10,7 +10,7 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Use the centrally maintained Go library verification and CI contract at
-  `go-library-tools` v1.0.6.
+  `go-library-tools` v1.0.13.
 
 ### Documentation
 
