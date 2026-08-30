@@ -7,6 +7,24 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+The [specification decision register](docs/specification-decisions.md) records
+the observable protocol choices covered by these entries.
+
+### Added
+
+- Add machine-auditable JSON:API decision, conformance, authority-monitoring,
+  interoperability, and decision-history records.
+- JSONAPI-DEC-001 sha256:1c992612f6fdf57e5858753747bcb57464f149b517084813681e7029f31186f0
+- JSONAPI-DEC-002 sha256:7d6658ae3e8b8176dffdb80996a5439f55b30d8d3c1e5a2a3d1c9f285f2d2338
+- JSONAPI-DEC-003 sha256:86ae12b7a1ba561cf2f694756d980ed6eec544b3007f47058e87f8c51023115e
+- JSONAPI-DEC-004 sha256:be285995517629345b407e0b93744ada5cc85d54b72092b38310d9ff16b795f5
+- JSONAPI-DEC-005 sha256:db4077bb84f3aadc3f3b68c307029f01c2f49ae45a8f17d34e0d4945a03f31d3
+- JSONAPI-DEC-006 sha256:526de3bc95e292ca970e560bd06783a9ce70a8ef656dfd8e7ef51151a00339c5
+- JSONAPI-DEC-007 sha256:ad587c6d3623a7964b3047f742d2b9c191b9b979984171857c7277092d110501
+- JSONAPI-DEC-008 sha256:98b181e40f339a4a11b389a6bfe2ed0ca28ac1225fabfdaad62f5430bb5363b7
+- JSONAPI-DEC-009 sha256:47736a0649bf48e19fed8cc75bb8308ac1790699487a4e4055a8e2a4d486ec2b
+- JSONAPI-DEC-010 sha256:c7a9604e5ef3e66a7576826b8ab08b6e58d5de1bd4d9545184b4ff0c66d8c2fa
+
 ### Changed
 
 - Use the centrally maintained Go library verification and CI contract at

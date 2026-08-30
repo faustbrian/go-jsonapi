@@ -15,4 +15,5 @@ defaults. A compile-compatible change can still be behaviorally breaking.
 
 Specification-backed modules MUST NOT diverge from their declared standards.
 Ambiguities require documented decisions and stable tests. Deprecated APIs
-follow [`DEPRECATION.md`](DEPRECATION.md).
+follow [`DEPRECATION.md`](DEPRECATION.md). Observable specification choices
+are preserved in the [decision register](docs/specification-decisions.md).

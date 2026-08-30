@@ -44,7 +44,7 @@
       "test_tags": [],
       "interoperability_tools": [],
       "specifications": [
-        "JSON:API 1.0 and 1.1",
+        "JSON:API 1.1",
         "JSON:API Atomic Operations extension",
         "JSON:API Cursor Pagination profile",
         "JSON:API recommendations",

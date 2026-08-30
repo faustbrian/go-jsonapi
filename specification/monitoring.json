@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-08-30",
+  "review_interval_days": 90,
+  "authorities": [
+    {
+      "id": "jsonapi-1.1-source",
+      "kind": "specification",
+      "version": "JSON:API 1.1",
+      "url": "https://jsonapi.org/format/",
+      "sha256": "0561c0d7471422779fc231901aba8e90338b40abb20851689dafaa471df6cb4c",
+      "specifications": ["JSON:API 1.1"]
+    },
+    {
+      "id": "jsonapi-1.1-releases",
+      "kind": "releases",
+      "version": "",
+      "url": "https://jsonapi.org/format/",
+      "sha256": "0561c0d7471422779fc231901aba8e90338b40abb20851689dafaa471df6cb4c",
+      "specifications": ["JSON:API 1.1"]
+    },
+    {
+      "id": "jsonapi-atomic-source",
+      "kind": "extension",
+      "version": "JSON:API Atomic Operations extension",
+      "url": "https://jsonapi.org/ext/atomic/",
+      "sha256": "c096bba0bb23799f31e65a7a9dca3379b643c0ae73ee49757a743fd883c52a5a",
+      "specifications": ["JSON:API Atomic Operations extension"]
+    },
+    {
+      "id": "jsonapi-atomic-releases",
+      "kind": "releases",
+      "version": "",
+      "url": "https://jsonapi.org/ext/atomic/",
+      "sha256": "c096bba0bb23799f31e65a7a9dca3379b643c0ae73ee49757a743fd883c52a5a",
+      "specifications": ["JSON:API Atomic Operations extension"]
+    },
+    {
+      "id": "jsonapi-cursor-source",
+      "kind": "specification",
+      "version": "JSON:API Cursor Pagination profile",
+      "url": "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/",
+      "sha256": "8a2a1444c7a9ef1c9eb78239a963781f131bc61a00cfe477860b6553692c47d9",
+      "specifications": ["JSON:API Cursor Pagination profile"]
+    },
+    {
+      "id": "jsonapi-cursor-releases",
+      "kind": "releases",
+      "version": "",
+      "url": "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/",
+      "sha256": "8a2a1444c7a9ef1c9eb78239a963781f131bc61a00cfe477860b6553692c47d9",
+      "specifications": ["JSON:API Cursor Pagination profile"]
+    },
+    {
+      "id": "jsonapi-recommendations-source",
+      "kind": "recommendation",
+      "version": "JSON:API recommendations",
+      "url": "https://jsonapi.org/recommendations/",
+      "sha256": "7ba118069fd9c850d4452f113d1a79ba5f6167443df1909d576805dc287f3dd2",
+      "specifications": ["JSON:API recommendations"]
+    },
+    {
+      "id": "jsonapi-recommendations-releases",
+      "kind": "releases",
+      "version": "",
+      "url": "https://jsonapi.org/recommendations/",
+      "sha256": "7ba118069fd9c850d4452f113d1a79ba5f6167443df1909d576805dc287f3dd2",
+      "specifications": ["JSON:API recommendations"]
+    },
+    {
+      "id": "rfc8259-source",
+      "kind": "specification",
+      "version": "RFC 8259",
+      "url": "https://www.rfc-editor.org/rfc/rfc8259.txt",
+      "sha256": "61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7",
+      "specifications": ["RFC 8259 JSON"]
+    },
+    {
+      "id": "rfc8259-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=8259&presentation=records",
+      "sha256": "5819db2e0233addf17ed540db88cf92cbefda5a60c38877e0d4cbf6b876b7cf4",
+      "specifications": ["RFC 8259 JSON"]
+    },
+    {
+      "id": "rfc8288-source",
+      "kind": "specification",
+      "version": "RFC 8288",
+      "url": "https://www.rfc-editor.org/rfc/rfc8288.txt",
+      "sha256": "820f624e0b0884af5c732e8087a65182452e49f2f49cd784ad7c30e16a4fc35d",
+      "specifications": ["RFC 8288 Web Linking"]
+    },
+    {
+      "id": "rfc8288-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=8288&presentation=records",
+      "sha256": "56250be86ce9674c5bc16141bfe73a7685fc7a0f13a5f882bfa7c020b5273465",
+      "specifications": ["RFC 8288 Web Linking"]
+    },
+    {
+      "id": "rfc9110-source",
+      "kind": "specification",
+      "version": "RFC 9110",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+      "sha256": "21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a",
+      "specifications": ["RFC 9110 HTTP Semantics"]
+    },
+    {
+      "id": "rfc9110-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=9110&presentation=records",
+      "sha256": "38bd006c96f8963d58573f704c5313a5f81968b90738c03ade0b036ec7bbdf4b",
+      "specifications": ["RFC 9110 HTTP Semantics"]
+    }
+  ]
+}
