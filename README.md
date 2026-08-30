@@ -86,6 +86,9 @@ Run `make check` before submitting a change. This enforces formatting, static
 analysis, race tests, meaningful 100% coverage, fuzz smoke, benchmarks,
 documentation, and vulnerability scanning.
 
+Run `make interoperability` to reproduce the pinned maintained-peer decision
+matrix without adding competitor dependencies to the public module.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and follow the

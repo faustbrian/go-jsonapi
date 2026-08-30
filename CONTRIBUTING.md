@@ -38,6 +38,7 @@ Run during development:
 
 ```bash
 make inventory
+make interoperability
 make check
 ```
 

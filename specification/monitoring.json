@@ -6,65 +6,65 @@
     {
       "id": "jsonapi-1.1-source",
       "kind": "specification",
-      "version": "JSON:API 1.1",
-      "url": "https://jsonapi.org/format/",
-      "sha256": "0561c0d7471422779fc231901aba8e90338b40abb20851689dafaa471df6cb4c",
+      "version": "JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md",
+      "sha256": "8d590f694fcdd140201d5c9b9cf246596139088eedc35ab89df98aa5b0e07f34",
       "specifications": ["JSON:API 1.1"]
     },
     {
-      "id": "jsonapi-1.1-releases",
+      "id": "jsonapi-1.1-updates",
       "kind": "releases",
       "version": "",
-      "url": "https://jsonapi.org/format/",
-      "sha256": "0561c0d7471422779fc231901aba8e90338b40abb20851689dafaa471df6cb4c",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/_format/1.1/index.md",
+      "sha256": "8d590f694fcdd140201d5c9b9cf246596139088eedc35ab89df98aa5b0e07f34",
       "specifications": ["JSON:API 1.1"]
     },
     {
       "id": "jsonapi-atomic-source",
       "kind": "extension",
-      "version": "JSON:API Atomic Operations extension",
-      "url": "https://jsonapi.org/ext/atomic/",
-      "sha256": "c096bba0bb23799f31e65a7a9dca3379b643c0ae73ee49757a743fd883c52a5a",
+      "version": "JSON:API Atomic Operations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/ext/atomic/index.md",
+      "sha256": "5910e972ef4f75d7c70703647731673933b3be1d1d08805e52efd9fd35d8bd34",
       "specifications": ["JSON:API Atomic Operations extension"]
     },
     {
-      "id": "jsonapi-atomic-releases",
+      "id": "jsonapi-atomic-updates",
       "kind": "releases",
       "version": "",
-      "url": "https://jsonapi.org/ext/atomic/",
-      "sha256": "c096bba0bb23799f31e65a7a9dca3379b643c0ae73ee49757a743fd883c52a5a",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/ext/atomic/index.md",
+      "sha256": "5910e972ef4f75d7c70703647731673933b3be1d1d08805e52efd9fd35d8bd34",
       "specifications": ["JSON:API Atomic Operations extension"]
     },
     {
       "id": "jsonapi-cursor-source",
       "kind": "specification",
-      "version": "JSON:API Cursor Pagination profile",
-      "url": "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/",
-      "sha256": "8a2a1444c7a9ef1c9eb78239a963781f131bc61a00cfe477860b6553692c47d9",
+      "version": "JSON:API Cursor Pagination at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_profiles/ethanresnick/cursor-pagination/index.md",
+      "sha256": "29c1a9fe736f0419c5dbbfe0e9ef80db38554c7a4f91c8c086e50549d9112f2e",
       "specifications": ["JSON:API Cursor Pagination profile"]
     },
     {
-      "id": "jsonapi-cursor-releases",
+      "id": "jsonapi-cursor-updates",
       "kind": "releases",
       "version": "",
-      "url": "https://jsonapi.org/profiles/ethanresnick/cursor-pagination/",
-      "sha256": "8a2a1444c7a9ef1c9eb78239a963781f131bc61a00cfe477860b6553692c47d9",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/_profiles/ethanresnick/cursor-pagination/index.md",
+      "sha256": "29c1a9fe736f0419c5dbbfe0e9ef80db38554c7a4f91c8c086e50549d9112f2e",
       "specifications": ["JSON:API Cursor Pagination profile"]
     },
     {
       "id": "jsonapi-recommendations-source",
       "kind": "recommendation",
-      "version": "JSON:API recommendations",
-      "url": "https://jsonapi.org/recommendations/",
-      "sha256": "7ba118069fd9c850d4452f113d1a79ba5f6167443df1909d576805dc287f3dd2",
+      "version": "JSON:API recommendations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/recommendations/index.md",
+      "sha256": "37e5fa40aee23c58047b2da54e90fb511c2fe2418773385562faf6ef65922f01",
       "specifications": ["JSON:API recommendations"]
     },
     {
-      "id": "jsonapi-recommendations-releases",
+      "id": "jsonapi-recommendations-updates",
       "kind": "releases",
       "version": "",
-      "url": "https://jsonapi.org/recommendations/",
-      "sha256": "7ba118069fd9c850d4452f113d1a79ba5f6167443df1909d576805dc287f3dd2",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/recommendations/index.md",
+      "sha256": "37e5fa40aee23c58047b2da54e90fb511c2fe2418773385562faf6ef65922f01",
       "specifications": ["JSON:API recommendations"]
     },
     {

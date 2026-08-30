@@ -79,6 +79,13 @@ operations:
         target: conformance
         timeout: 20m
   - module: "."
+    gate: interoperability
+    steps:
+      - type: make
+        makefile: verification/package.mk
+        target: interoperability
+        timeout: 20m
+  - module: "."
     gate: docs
     steps:
       - type: make
