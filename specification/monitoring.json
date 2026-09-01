@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-08-30",
+  "review_interval_days": 90,
+  "authorities": [
+    {
+      "id": "jsonapi-1.1-source",
+      "kind": "specification",
+      "version": "JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md",
+      "sha256": "8d590f694fcdd140201d5c9b9cf246596139088eedc35ab89df98aa5b0e07f34",
+      "specifications": ["JSON:API 1.1"]
+    },
+    {
+      "id": "jsonapi-1.1-updates",
+      "kind": "releases",
+      "version": "",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/_format/1.1/index.md",
+      "sha256": "8d590f694fcdd140201d5c9b9cf246596139088eedc35ab89df98aa5b0e07f34",
+      "specifications": ["JSON:API 1.1"]
+    },
+    {
+      "id": "jsonapi-atomic-source",
+      "kind": "extension",
+      "version": "JSON:API Atomic Operations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/ext/atomic/index.md",
+      "sha256": "5910e972ef4f75d7c70703647731673933b3be1d1d08805e52efd9fd35d8bd34",
+      "specifications": ["JSON:API Atomic Operations extension"]
+    },
+    {
+      "id": "jsonapi-atomic-updates",
+      "kind": "releases",
+      "version": "",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/ext/atomic/index.md",
+      "sha256": "5910e972ef4f75d7c70703647731673933b3be1d1d08805e52efd9fd35d8bd34",
+      "specifications": ["JSON:API Atomic Operations extension"]
+    },
+    {
+      "id": "jsonapi-cursor-source",
+      "kind": "specification",
+      "version": "JSON:API Cursor Pagination at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_profiles/ethanresnick/cursor-pagination/index.md",
+      "sha256": "29c1a9fe736f0419c5dbbfe0e9ef80db38554c7a4f91c8c086e50549d9112f2e",
+      "specifications": ["JSON:API Cursor Pagination profile"]
+    },
+    {
+      "id": "jsonapi-cursor-updates",
+      "kind": "releases",
+      "version": "",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/_profiles/ethanresnick/cursor-pagination/index.md",
+      "sha256": "29c1a9fe736f0419c5dbbfe0e9ef80db38554c7a4f91c8c086e50549d9112f2e",
+      "specifications": ["JSON:API Cursor Pagination profile"]
+    },
+    {
+      "id": "jsonapi-recommendations-source",
+      "kind": "recommendation",
+      "version": "JSON:API recommendations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/recommendations/index.md",
+      "sha256": "37e5fa40aee23c58047b2da54e90fb511c2fe2418773385562faf6ef65922f01",
+      "specifications": ["JSON:API recommendations"]
+    },
+    {
+      "id": "jsonapi-recommendations-updates",
+      "kind": "releases",
+      "version": "",
+      "url": "https://raw.githubusercontent.com/json-api/json-api/gh-pages/recommendations/index.md",
+      "sha256": "37e5fa40aee23c58047b2da54e90fb511c2fe2418773385562faf6ef65922f01",
+      "specifications": ["JSON:API recommendations"]
+    },
+    {
+      "id": "rfc8259-source",
+      "kind": "specification",
+      "version": "RFC 8259",
+      "url": "https://www.rfc-editor.org/rfc/rfc8259.txt",
+      "sha256": "61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7",
+      "specifications": ["RFC 8259 JSON"]
+    },
+    {
+      "id": "rfc8259-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=8259&presentation=records",
+      "sha256": "5819db2e0233addf17ed540db88cf92cbefda5a60c38877e0d4cbf6b876b7cf4",
+      "specifications": ["RFC 8259 JSON"]
+    },
+    {
+      "id": "rfc8288-source",
+      "kind": "specification",
+      "version": "RFC 8288",
+      "url": "https://www.rfc-editor.org/rfc/rfc8288.txt",
+      "sha256": "820f624e0b0884af5c732e8087a65182452e49f2f49cd784ad7c30e16a4fc35d",
+      "specifications": ["RFC 8288 Web Linking"]
+    },
+    {
+      "id": "rfc8288-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=8288&presentation=records",
+      "sha256": "56250be86ce9674c5bc16141bfe73a7685fc7a0f13a5f882bfa7c020b5273465",
+      "specifications": ["RFC 8288 Web Linking"]
+    },
+    {
+      "id": "rfc9110-source",
+      "kind": "specification",
+      "version": "RFC 9110",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+      "sha256": "21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a",
+      "specifications": ["RFC 9110 HTTP Semantics"]
+    },
+    {
+      "id": "rfc9110-errata",
+      "kind": "errata",
+      "version": "",
+      "url": "https://errata.rfc-editor.org/search/?rfc_number=9110&presentation=records",
+      "sha256": "38bd006c96f8963d58573f704c5313a5f81968b90738c03ade0b036ec7bbdf4b",
+      "specifications": ["RFC 9110 HTTP Semantics"]
+    }
+  ]
+}

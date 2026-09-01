@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "decisions": [
+    {
+      "id": "JSONAPI-DEC-001",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestDecodersIgnoreNonCompliantMembers", "TestAtAndNonCompliantMembersAreIgnored", "TestCoreCodecIgnoresUnregisteredExtensionMember"],
+      "fixtures": ["unknown_member_test.go"],
+      "fuzz": ["FuzzUnmarshal"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": ["specification/differential.tsv"],
+      "differential_classification": "maintained peer agreement",
+      "public_behavior": ["Unknown members are ignored without weakening recognized-member validation."]
+    },
+    {
+      "id": "JSONAPI-DEC-002",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestNewCodecRejectsInvalidExtensionDefinitions", "TestCodecRoundTripsRegisteredResourceExtensionMember", "TestCodecAppliesRegisteredProfileDocumentValidation", "TestProfileValidatorCannotMutateValidatedDocument"],
+      "fixtures": ["member_codec_test.go", "profile_codec_test.go"],
+      "fuzz": ["FuzzMemberRegistry"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Only registered extension and profile semantics become active."]
+    },
+    {
+      "id": "JSONAPI-DEC-003",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestParseQueryParameters", "TestParseQueryPreservesExplicitEmptyIncludeAndSort", "TestQueryParserAcceptsRegisteredCustomAndExtensionFamilies", "TestParseQueryRejectsMalformedOrUnknownParameters"],
+      "fixtures": ["query_test.go"],
+      "fuzz": ["FuzzParseQuery"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": ["specification/differential.tsv"],
+      "differential_classification": "deliberate policy difference",
+      "public_behavior": ["Core query families parse directly and custom families require registration."]
+    },
+    {
+      "id": "JSONAPI-DEC-004",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestMarshalRelationshipDataShapes", "TestValidateRelationshipRequestContexts", "TestRelationshipIdentifierTraversalClassifiesEveryShape", "TestValidateAcceptsToManyCompoundLinkage"],
+      "fixtures": ["document_test.go", "context_validation_test.go"],
+      "fuzz": ["FuzzConstructedDocumentValidation"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": ["specification/differential.tsv"],
+      "differential_classification": "deliberate policy difference",
+      "public_behavior": ["Relationship content and linkage shapes retain distinct presence semantics."]
+    },
+    {
+      "id": "JSONAPI-DEC-005",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestValidateLinksIncludedResourceThroughItsLocalIdentity", "TestIncludedIdentityFollowsValidationContext", "TestValidateWithAllowsSparseFieldsetFullLinkageException"],
+      "fixtures": ["testdata/valid/compound-document.json"],
+      "fuzz": ["FuzzConstructedDocumentValidation"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": ["specification/differential.tsv"],
+      "differential_classification": "maintained peer agreement",
+      "public_behavior": ["Included-resource uniqueness and linkage use one alias-aware identity graph."]
+    },
+    {
+      "id": "JSONAPI-DEC-006",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestParseQueryParameters", "TestParseQueryPreservesExplicitEmptyIncludeAndSort", "TestValidateWithAllowsSparseFieldsetFullLinkageException"],
+      "fixtures": ["query_test.go"],
+      "fuzz": ["FuzzParseQuery"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": ["specification/differential.tsv"],
+      "differential_classification": "deliberate policy difference",
+      "public_behavior": ["Fieldset parsing is separate from schema-aware projection and authorization."]
+    },
+    {
+      "id": "JSONAPI-DEC-007",
+      "authoritative_sources": ["jsonapi-cursor-source"],
+      "executable_evidence": ["TestParseQueryParameters", "TestPaginationLinksRequireCollectionData", "TestCursorPaginationParsesProfileParameters", "TestValidateCursorPaginationLinks"],
+      "fixtures": ["cursor_test.go", "cursor_page_test.go"],
+      "fuzz": ["FuzzCursorPaginationQuery"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Cursor pagination rules activate only through the optional profile API."]
+    },
+    {
+      "id": "JSONAPI-DEC-008",
+      "authoritative_sources": ["jsonapi-atomic-source"],
+      "executable_evidence": ["TestExecuteAtomicAppliesInOrderAndCommits", "TestExecuteAtomicRollsBackAtFirstOperationFailure", "TestExecuteAtomicRollsBackCommitFailure", "TestExecuteAtomicConvertsApplyPanicAndRollsBack", "TestExecuteAtomicStopsAndRollsBackOnCancellation"],
+      "fixtures": ["atomic_execute_test.go"],
+      "fuzz": ["FuzzUnmarshalAtomic"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Atomic execution is ordered and a post-begin failure causes one rollback attempt."]
+    },
+    {
+      "id": "JSONAPI-DEC-009",
+      "authoritative_sources": ["jsonapi-recommendations-source"],
+      "executable_evidence": ["TestParseQueryParameters", "TestQueryParserAcceptsRegisteredCustomAndExtensionFamilies"],
+      "fixtures": ["query_test.go"],
+      "fuzz": ["FuzzParseQuery"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Recommendation-only conventions are not base validation rules."]
+    },
+    {
+      "id": "JSONAPI-DEC-010",
+      "authoritative_sources": ["jsonapi-1.1-source"],
+      "executable_evidence": ["TestCodecAppliesRegisteredProfileDocumentValidation", "TestProfileValidatorCannotMutateValidatedDocument", "TestExecuteAtomicAppliesInOrderAndCommits", "TestCursorPaginationParsesProfileParameters"],
+      "fixtures": ["profile_codec_test.go"],
+      "fuzz": ["FuzzMemberRegistry"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Base, extension, profile, recommendation, and application authority remain distinct."]
+    },
+    {
+      "id": "JSONAPI-DEC-011",
+      "authoritative_sources": ["rfc8259-source"],
+      "executable_evidence": ["TestUnmarshalRejectsDuplicateObjectMembers", "TestUnmarshalAtomicRejectsForbiddenAndMalformedMembers"],
+      "fixtures": ["duplicate_member_test.go"],
+      "fuzz": ["FuzzUnmarshal", "FuzzUnmarshalAtomic"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Duplicate object members are rejected before semantic decoding at every depth."]
+    },
+    {
+      "id": "JSONAPI-DEC-012",
+      "authoritative_sources": ["rfc8288-source"],
+      "executable_evidence": ["TestValidateRejectsInvalidLinkObjectMembers", "TestRegisteredLinkRelationRejectsUnderscore"],
+      "fixtures": ["link_test.go"],
+      "fuzz": ["FuzzConstructedDocumentValidation"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Link relations are registered tokens or absolute extension relation URIs."]
+    },
+    {
+      "id": "JSONAPI-DEC-013",
+      "authoritative_sources": ["rfc9110-source"],
+      "executable_evidence": ["TestNegotiateAcceptUsesSpecificityQualityAndCanonicalTieBreak", "TestQualityForRepresentationHonorsSpecificityBeforeQuality", "TestHTTPQualityGrammarBoundaries"],
+      "fixtures": ["negotiation_test.go"],
+      "fuzz": ["FuzzNegotiation"],
+      "interoperability_evidence": [],
+      "interoperability_classification": "not assessed",
+      "differential_evidence": [],
+      "differential_classification": "not assessed",
+      "public_behavior": ["Accept specificity and quality precede a canonical supported-representation tie-break."]
+    }
+  ]
+}

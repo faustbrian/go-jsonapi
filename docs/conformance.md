@@ -9,6 +9,13 @@ Material ambiguities and authority conflicts are preserved in the
 shows coverage; the register explains why an observable interpretation was
 selected.
 
+Official or provider interoperability and maintained-peer differentials are
+separate evidence lanes. JSON:API publishes no official conformance suite for
+these decisions, so official interoperability is currently unassessed. The
+[reproducible differential matrix](../specification/differential.tsv) compares
+the practical overlap with DataDog/jsonapi v0.13.0; decisions without an
+overlapping peer surface remain visibly unassessed.
+
 ## JSON:API 1.1 core
 
 | Classification | Requirement and primary section | Implementation | Executable evidence |

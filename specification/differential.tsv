@@ -1,0 +1,11 @@
+decision_id	case	implementation	version	outcome	classification
+JSONAPI-DEC-001	unknown-resource-member	faustbrian/go-jsonapi	workspace	accepted-and-ignored	maintained peer agreement
+JSONAPI-DEC-001	unknown-resource-member	DataDog/jsonapi	v0.13.0	accepted-and-ignored	maintained peer agreement
+JSONAPI-DEC-004	null-and-empty-linkage	faustbrian/go-jsonapi	workspace	accepted-distinct-shapes	deliberate policy difference
+JSONAPI-DEC-004	null-and-empty-linkage	DataDog/jsonapi	v0.13.0	accepted-collapsed-shapes	deliberate policy difference
+JSONAPI-DEC-005	duplicate-included-resource	faustbrian/go-jsonapi	workspace	rejected	maintained peer agreement
+JSONAPI-DEC-005	duplicate-included-resource	DataDog/jsonapi	v0.13.0	rejected	maintained peer agreement
+JSONAPI-DEC-003	sparse-field-family	faustbrian/go-jsonapi	workspace	parsed-for-application	deliberate policy difference
+JSONAPI-DEC-003	sparse-field-family	DataDog/jsonapi	v0.13.0	applied-during-marshal	deliberate policy difference
+JSONAPI-DEC-006	sparse-field-responsibility	faustbrian/go-jsonapi	workspace	parsed-for-application	deliberate policy difference
+JSONAPI-DEC-006	sparse-field-responsibility	DataDog/jsonapi	v0.13.0	applied-during-marshal	deliberate policy difference

@@ -7,10 +7,48 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+The [specification decision register](docs/specification-decisions.md) records
+the observable protocol choices covered by these entries.
+
+### Added
+
+- Add machine-auditable JSON:API decision, conformance, authority-monitoring,
+  interoperability, and decision-history records.
+- JSONAPI-DEC-001 sha256:1c992612f6fdf57e5858753747bcb57464f149b517084813681e7029f31186f0
+- JSONAPI-DEC-002 sha256:7d6658ae3e8b8176dffdb80996a5439f55b30d8d3c1e5a2a3d1c9f285f2d2338
+- JSONAPI-DEC-003 sha256:86ae12b7a1ba561cf2f694756d980ed6eec544b3007f47058e87f8c51023115e
+- JSONAPI-DEC-004 sha256:be285995517629345b407e0b93744ada5cc85d54b72092b38310d9ff16b795f5
+- JSONAPI-DEC-005 sha256:db4077bb84f3aadc3f3b68c307029f01c2f49ae45a8f17d34e0d4945a03f31d3
+- JSONAPI-DEC-006 sha256:526de3bc95e292ca970e560bd06783a9ce70a8ef656dfd8e7ef51151a00339c5
+- JSONAPI-DEC-007 sha256:ad587c6d3623a7964b3047f742d2b9c191b9b979984171857c7277092d110501
+- JSONAPI-DEC-008 sha256:98b181e40f339a4a11b389a6bfe2ed0ca28ac1225fabfdaad62f5430bb5363b7
+- JSONAPI-DEC-009 sha256:47736a0649bf48e19fed8cc75bb8308ac1790699487a4e4055a8e2a4d486ec2b
+- JSONAPI-DEC-010 sha256:c7a9604e5ef3e66a7576826b8ab08b6e58d5de1bd4d9545184b4ff0c66d8c2fa
+- Add explicit RFC decisions for duplicate JSON members, link relation types,
+  and HTTP Accept precedence and deterministic ties.
+- JSONAPI-DEC-011 sha256:d234cd9a4e40ce09214a023d09c11af6e7077c1ba5a39f8c01a9dc6cbbb98095
+- JSONAPI-DEC-012 sha256:85161bb47428b3aead1e8930b318ccd9a81468001e190378cdb7b621eb3022ef
+- JSONAPI-DEC-013 sha256:9b156b1aaf44e12eb6f10ee74a737c981aec3f898b94fad1f547ac2e68c57e04
+
 ### Changed
 
-- Use the centrally maintained Go library verification and CI contract at
-  `go-library-tools` v1.0.6.
+- Pin JSON:API source text to an immutable upstream revision, monitor mutable
+  update documents separately, and add an executable DataDog/jsonapi v0.13.0
+  differential harness outside the public module.
+- JSONAPI-DEC-001 sha256:7ab9e941c1eed52abff8d37ed674e466d75682bfc9dc3427242089692c7fadd4
+- JSONAPI-DEC-002 sha256:92b24e46b91b172239d6c7ef6afeab3028f6d3d883f6c66e641b951574811cb3
+- JSONAPI-DEC-003 sha256:b894d768df3cdfa96914f4b8805c3dfdfe3bf3988b7281e48f73113c7abff5c1
+- JSONAPI-DEC-004 sha256:eefa54a58ed63f71bbaa3b6d2d8be4cabcaef92ee05d1d9c7e7014aebde062fd
+- JSONAPI-DEC-005 sha256:8c5339c0c40d1ca9ecbc7db8fe8ecb133d597b6dfa4d535f9140e7a803751050
+- JSONAPI-DEC-006 sha256:91709eb6d82599863d8e03759d1cd9f7268d26e8cfb3b0dd652b7e271873cb97
+- JSONAPI-DEC-007 sha256:17f841abf7b9511169d916412f03e7b513bfde2b93b7642266a23d92e5ee99f0
+- JSONAPI-DEC-008 sha256:383a65c3c89cae68d2d614993caab29da026c9a6a2c057e570b6bbf652c9a7db
+- JSONAPI-DEC-009 sha256:ee3532533128439a7617e7da04fbbda13f30b14b7eb301190fd5712a1d2c0625
+- JSONAPI-DEC-010 sha256:6721f9d3ea09062d9665828d3e1f2127d3bd3d1d967d6214e01a164bc7b8b1f2
+
+- Use the released `go-library-tools` v1.2.0 CLI and immutable merged
+  workflow at `1f9629e5f27418600460b55a50a5b2fc81697fab` so local and
+  hosted verification enforce the same specification-governance contract.
 
 ### Documentation
 

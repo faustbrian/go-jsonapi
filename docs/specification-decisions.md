@@ -1,200 +1,436 @@
 # JSON:API specification decisions
 
-This register records observable choices where JSON:API 1.1, its official
-extensions, profiles, recommendations, or referenced standards permit or
-appear to permit more than one implementation. The
-[JSON:API 1.1 format](https://jsonapi.org/format/) is authoritative for the
-base protocol. Extension, profile, and recommendation authority is stated per
-decision rather than merged into the base specification.
+This register records observable choices for JSON:API 1.1, its official
+extensions, profiles, recommendations, and referenced standards. The typed
+authority is [`specification/decisions.json`](../specification/decisions.json);
+this document preserves the same values for human review.
 
-Statuses are `resolved`, `unresolved`, or `superseded`. Resolved decisions are
-part of the compatibility contract. A change requires specification review,
-executable evidence, and a changelog entry.
+Resolved decisions are compatibility-sensitive. Unresolved decisions block
+repository and release verification. Superseded decisions remain here with a
+link to their replacement.
 
 ## JSONAPI-DEC-001: Non-compliant and unrecognized members
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [document structure](https://jsonapi.org/format/#document-structure) and [@-Members](https://jsonapi.org/format/#document-at-members) |
-| Classification | Normative requirement and forward-compatibility policy |
-| Issue | JSON:API-defined objects MUST NOT contain additional members, but implementations MUST ignore non-compliant members. Rejecting an unknown member is therefore stricter than the protocol and prevents forward compatibility. |
-| Credible interpretations | Reject any member not defined for the object; retain unknown members opaquely; or ignore them while continuing to validate all recognized members. |
-| Known peer behavior | No maintained peer fixture is pinned yet. The base specification explicitly requires ignore behavior, so peer disagreement cannot override it. |
-| Selected behavior | Core and Atomic decoders discard unrecognized and unapplied extension members, including nested object members, and continue validating recognized content. `@`-Members are likewise ignored recursively. Duplicate names, malformed JSON, resource-limit violations, invalid recognized values, and explicitly forbidden known members remain errors. |
-| Security and resource consequences | Ignored members cannot smuggle recognized semantics into handlers; duplicate, malformed, and over-limit input still fails before application use. Recursive scanning remains subject to codec depth, member, and byte limits. |
-| Compatibility and wire consequences | New or non-compliant members do not break otherwise valid documents and are omitted when marshaled. Applied registered extension members are extracted first and retain their declared wire semantics. |
-| Executable evidence | `TestDecodersIgnoreNonCompliantMembers`, `TestAtAndNonCompliantMembersAreIgnored`, and the `TestCoreCodecIgnores*` extension-member cases |
-| Public surface | `Unmarshal`, `UnmarshalWith`, `Codec.Unmarshal`, `UnmarshalAtomic` |
-| Upstream record | The normative requirement is in the base format; no erratum is needed. |
-| Reconsider when | A future JSON:API version changes ignore semantics or defines preservation of unknown members. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** ambiguity
+- **Decision scope:** normative
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Document Structure and @-Members
+- **Requirement strength:** MUST
+- **Issue:** JSON:API forbids additional members in defined objects while requiring implementations to ignore non-compliant members.
+- **Credible interpretations:**
+  - Reject every unknown member.
+  - Ignore non-compliant members while validating recognized content.
+- **Known peer behavior:** The pinned DataDog/jsonapi v0.13.0 harness also accepts and ignores an unrecognized resource member.
+- **Selected behavior:** Core and Atomic decoders ignore unrecognized members while continuing to validate recognized content.
+- **Rationale:** Ignoring non-compliant members preserves forward compatibility without weakening recognized-member validation.
+- **Security consequences:** Ignored members cannot satisfy required structure or activate application semantics.
+- **Resource consequences:** Unknown-member scanning remains subject to configured byte, depth, member, and value limits.
+- **Compatibility consequences:** New unknown members do not break otherwise valid documents.
+- **Wire consequences:** Ignored members are not emitted when the document is marshaled again.
+- **Executable evidence:** TestDecodersIgnoreNonCompliantMembers, TestAtAndNonCompliantMembersAreIgnored, TestCoreCodecIgnoresUnregisteredExtensionMember
+- **Fixture evidence:** unknown_member_test.go
+- **Fuzz evidence:** FuzzUnmarshal
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** specification/differential.tsv
+- **Public APIs:** `Unmarshal`, `UnmarshalWith`, `Codec.Unmarshal`, and `UnmarshalAtomic`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** The requirement is present in the JSON:API 1.1 format; no erratum is required.
+- **Reconsider when:** A later JSON:API version changes unknown-member handling.
 
 ## JSONAPI-DEC-002: Extension namespaces and profile authority
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Extensions](https://jsonapi.org/format/#extensions), [Extension Members](https://jsonapi.org/format/#extension-members), [Profiles](https://jsonapi.org/format/#profiles), and [Content Negotiation](https://jsonapi.org/format/#content-negotiation) |
-| Classification | Normative interpretation and package policy |
-| Issue | Extensions may add namespaced semantics, while profiles may define implementation semantics but cannot alter or remove base rules. Codec registration and HTTP declaration are separate boundaries. |
-| Credible interpretations | Infer semantics from any colon member; apply every declared URI dynamically; or require explicit immutable registration for semantic processing while ignoring unapplied content. |
-| Known peer behavior | No maintained peer matrix is pinned across object scopes. Official Atomic and Cursor artifacts are the current independent authorities. |
-| Selected behavior | An extension URI, namespace, object scope, member name, and optional validator must be registered before the member becomes semantic content. Profiles use document-level validators only after base validation and cannot mutate or weaken the validated document. Codec and negotiator registration are explicit and must use the same supported URI policy. |
-| Security and resource consequences | Explicit immutable registration prevents untrusted declarations from activating code or weakening core validation. Callback execution is bounded and cannot convert invalid core data into valid data. |
-| Compatibility and wire consequences | Unknown extension members follow JSONAPI-DEC-001. Registered members round-trip only at their exact scope; unsupported request extensions fail negotiation, while unknown profiles remain declarations without package-owned semantics. |
-| Executable evidence | `TestNewCodecRejectsInvalidExtensionDefinitions`, `TestCodecRoundTripsRegisteredResourceExtensionMember`, scope-specific member codec tests, `TestCodecAppliesRegisteredProfileDocumentValidation`, `TestProfileValidatorCannotMutateValidatedDocument`, negotiation tests |
-| Public surface | `NewCodec`, `ExtensionDefinition`, `MemberDefinition`, `ProfileDefinition`, `NewNegotiator` |
-| Upstream record | Official extension and profile registries are linked from `docs/extensions-and-profiles.md`. |
-| Reconsider when | JSON:API changes extension/profile authority or introduces a discovery mechanism that can be applied safely without implicit semantics. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** omission
+- **Decision scope:** defensive
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Extensions, Extension Members, Profiles, and Content Negotiation
+- **Requirement strength:** not specified
+- **Issue:** JSON:API defines extension and profile authority but does not prescribe a safe runtime registration mechanism.
+- **Credible interpretations:**
+  - Activate semantics from every declared URI.
+  - Require explicit immutable registration before activating semantics.
+- **Known peer behavior:** No maintained peer matrix is pinned across all member scopes.
+- **Selected behavior:** Extension members and profile validators become semantic only through explicit immutable registration.
+- **Rationale:** Registration prevents untrusted declarations from activating code or weakening core validation.
+- **Security consequences:** Untrusted extension and profile declarations cannot activate callbacks implicitly.
+- **Resource consequences:** Registered callback execution remains bounded by codec and document limits.
+- **Compatibility consequences:** Unknown profiles remain declarations and unknown extension members follow JSONAPI-DEC-001.
+- **Wire consequences:** Registered members round-trip only at their declared object scope.
+- **Executable evidence:** TestNewCodecRejectsInvalidExtensionDefinitions, TestCodecRoundTripsRegisteredResourceExtensionMember, TestCodecAppliesRegisteredProfileDocumentValidation, TestProfileValidatorCannotMutateValidatedDocument
+- **Fixture evidence:** member_codec_test.go, profile_codec_test.go
+- **Fuzz evidence:** FuzzMemberRegistry
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** `NewCodec`, `ExtensionDefinition`, `MemberDefinition`, `ProfileDefinition`, and `NewNegotiator`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** Official extension and profile registries remain the upstream authorities.
+- **Reconsider when:** JSON:API defines a safe discovery and activation mechanism.
 
 ## JSONAPI-DEC-003: Query parameter families
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Fetching Data](https://jsonapi.org/format/#fetching), [Implementation-Specific Query Parameters](https://jsonapi.org/format/#query-parameters-custom), and [Extension Query Parameters](https://jsonapi.org/format/#query-parameters-custom) |
-| Classification | Normative interpretation and application seam |
-| Issue | The specification defines `include`, `fields`, `sort`, `page`, and `filter` families but leaves most filter and pagination semantics implementation-owned. Unknown families must not silently acquire meaning. |
-| Credible interpretations | Preserve every query parameter; reject everything outside core names; or accept explicitly registered implementation and extension families. |
-| Known peer behavior | No maintained router or server peer is pinned. The package compares behavior to the authoritative query grammar rather than one framework's routing conventions. |
-| Selected behavior | Parse core families with presence and ordering preserved. Accept implementation-specific and extension families only through explicit registration and valid name grammar. Reject malformed, unregistered, excessive, or semantically invalid parameters with a structured query error. Filtering, URL length, authorization, and backend execution remain application-owned. |
-| Security and resource consequences | Unregistered families cannot silently activate application behavior. Parameter count, name, value, and nesting limits bound parser work, while authorization and backend query safety remain caller-owned. |
-| Compatibility and wire consequences | Registered custom operators remain explicit and local. Parameter ordering and explicit empty values survive parsing, while malformed or unknown families produce structured errors rather than ambiguous query state. |
-| Executable evidence | `TestParseQueryParameters`, `TestParseQueryPreservesExplicitEmptyIncludeAndSort`, `TestQueryParserAcceptsRegisteredCustomAndExtensionFamilies`, `TestParseQueryRejectsMalformedOrUnknownParameters`, query-limit tests, `FuzzParseQuery` |
-| Public surface | `ParseQuery`, `NewQueryParser`, `QueryParser.Parse` |
-| Upstream record | No standard filter operator vocabulary exists in JSON:API 1.1. |
-| Reconsider when | A base revision or applied extension standardizes a currently application-owned family. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** omission
+- **Decision scope:** application-policy
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Fetching Data and Query Parameters
+- **Requirement strength:** not specified
+- **Issue:** JSON:API reserves query families but leaves filter, pagination, and implementation-specific semantics application-owned.
+- **Credible interpretations:**
+  - Preserve every query parameter.
+  - Accept only core and explicitly registered implementation or extension families.
+- **Known peer behavior:** The pinned DataDog/jsonapi v0.13.0 harness recognizes fields[type] during marshaling, while this package parses that family for application-owned projection.
+- **Selected behavior:** Parse core families and accept implementation or extension families only through explicit registration.
+- **Rationale:** Explicit registration keeps generic parsing separate from application query semantics.
+- **Security consequences:** Unknown families cannot silently activate backend behavior.
+- **Resource consequences:** Parameter count, name, value, and nesting limits bound parser work.
+- **Compatibility consequences:** Registered custom operators remain explicit and local to the configured parser.
+- **Wire consequences:** Ordering and explicit empty values are preserved; malformed or unknown families return structured errors.
+- **Executable evidence:** TestParseQueryParameters, TestParseQueryPreservesExplicitEmptyIncludeAndSort, TestQueryParserAcceptsRegisteredCustomAndExtensionFamilies, TestParseQueryRejectsMalformedOrUnknownParameters
+- **Fixture evidence:** query_test.go
+- **Fuzz evidence:** FuzzParseQuery
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** specification/differential.tsv
+- **Public APIs:** `ParseQuery`, `NewQueryParser`, and `QueryParser.Parse`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** JSON:API 1.1 defines no standard filter operator vocabulary.
+- **Reconsider when:** A base revision or applied extension standardizes an application-owned family.
 
 ## JSONAPI-DEC-004: Relationship objects and linkage
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Relationships](https://jsonapi.org/format/#document-resource-object-relationships), [Resource Linkage](https://jsonapi.org/format/#document-resource-object-linkage), and CRUD relationship rules |
-| Classification | Normative interpretation |
-| Issue | Relationship objects can carry links, data, meta, and applied extension members. Linkage has null, to-one, and to-many shapes, but does not itself authorize fetching or mutation. |
-| Credible interpretations | Require `data` for every relationship; treat an empty object as meaningful; or accept any qualifying normative member while preserving exact linkage shape. |
-| Known peer behavior | No maintained peer fixture is pinned across every create, update, and relationship endpoint context. |
-| Selected behavior | A relationship must contain at least one qualifying recognized or applied extension member. When `data` is present, preserve null, one identifier, or identifier collection exactly. Context-specific validators enforce create, update, and relationship endpoint shapes; the package does not infer authorization or persistence behavior. |
-| Security and resource consequences | Ignored members cannot satisfy the relationship minimum-member invariant or authorize traversal or mutation. Validation work remains bounded by document and relationship limits. |
-| Compatibility and wire consequences | A relationship containing only ignored members is invalid. Null, to-one, empty to-many, nonempty to-many, and absent linkage remain distinct wire states. |
-| Executable evidence | `TestMarshalRelationshipDataShapes`, `TestValidateRelationshipRequestContexts`, `TestRelationshipIdentifierTraversalClassifiesEveryShape`, `TestValidateAcceptsToManyCompoundLinkage` |
-| Public surface | `Relationship`, `RelationshipData`, validation contexts |
-| Upstream record | No known erratum changes the relationship object minimum-member rule. |
-| Reconsider when | JSON:API changes relationship object membership or endpoint validation requirements. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** ambiguity
+- **Decision scope:** normative
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Relationships and Resource Linkage
+- **Requirement strength:** MUST
+- **Issue:** Relationship objects may contain several qualifying members while linkage has absent, null, to-one, and to-many forms.
+- **Credible interpretations:**
+  - Require data in every relationship.
+  - Accept any qualifying member and preserve the exact linkage form.
+- **Known peer behavior:** The pinned DataDog/jsonapi v0.13.0 harness accepts null to-one and empty to-many linkage but collapses both to nil in its typed result.
+- **Selected behavior:** Require one qualifying recognized member and preserve absent, null, to-one, and to-many linkage distinctly.
+- **Rationale:** The selected behavior follows the relationship object contract without inventing authorization or persistence semantics.
+- **Security consequences:** Ignored members cannot satisfy required relationship content or authorize mutation.
+- **Resource consequences:** Relationship validation remains bounded by document limits.
+- **Compatibility consequences:** Applications retain responsibility for authorization and persistence.
+- **Wire consequences:** Absent, null, to-one, empty to-many, and nonempty to-many linkage remain distinct.
+- **Executable evidence:** TestMarshalRelationshipDataShapes, TestValidateRelationshipRequestContexts, TestRelationshipIdentifierTraversalClassifiesEveryShape, TestValidateAcceptsToManyCompoundLinkage
+- **Fixture evidence:** document_test.go, context_validation_test.go
+- **Fuzz evidence:** FuzzConstructedDocumentValidation
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** specification/differential.tsv
+- **Public APIs:** `Relationship`, `RelationshipData`, and validation contexts
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** No known erratum changes the relationship minimum-member rule.
+- **Reconsider when:** JSON:API changes relationship membership or contextual linkage rules.
 
 ## JSONAPI-DEC-005: Included-resource uniqueness and full linkage
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Compound Documents](https://jsonapi.org/format/#document-compound-documents) and [Sparse Fieldsets](https://jsonapi.org/format/#fetching-sparse-fieldsets) |
-| Classification | Normative interpretation |
-| Issue | Included resources must be unique and fully linked, but identity may use `id` or local `lid`, and sparse fieldsets may remove relationship fields that would otherwise prove linkage. |
-| Credible interpretations | Compare only type plus server ID; treat local identities separately; or build one alias-aware identity graph and apply the specified sparse-fieldset exception. |
-| Known peer behavior | No maintained peer graph implementation is pinned. Official examples and the package's identity fixtures are the current evidence. |
-| Selected behavior | Build an alias-aware identity index from type plus `id` or `lid`, reject duplicate represented resources, and traverse primary and included relationship linkage. Apply the full-linkage exception only when the relevant relationship field was excluded by a sparse fieldset. |
-| Security and resource consequences | Alias-aware uniqueness prevents identity confusion and duplicate-resource substitution. Graph traversal is bounded by document resource and relationship limits. |
-| Compatibility and wire consequences | A resource cannot appear twice through alternate identity aliases. Unreachable included resources fail unless the exact sparse-fieldset exception applies, producing deterministic compound-document acceptance. |
-| Executable evidence | `TestValidateLinksIncludedResourceThroughItsLocalIdentity`, `TestIncludedIdentityFollowsValidationContext`, `TestValidateWithAllowsSparseFieldsetFullLinkageException`, identity and validation tests |
-| Public surface | `Document.ValidateWith`, `ValidationOptions` |
-| Upstream record | No known erratum resolves aliasing beyond the base `id` and `lid` rules. |
-| Reconsider when | A future revision changes local identity or compound-document linkage semantics. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** ambiguity
+- **Decision scope:** normative
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Compound Documents and Sparse Fieldsets
+- **Requirement strength:** MUST
+- **Issue:** Included resources must be unique and fully linked while identity may use id or lid aliases.
+- **Credible interpretations:**
+  - Compare only type and server id.
+  - Build one alias-aware identity graph and apply the sparse-fieldset exception.
+- **Known peer behavior:** The pinned DataDog/jsonapi v0.13.0 harness also rejects duplicate included resources when its explicit uniqueness option is enabled.
+- **Selected behavior:** Use an alias-aware identity graph, reject duplicate resources, and require full linkage except for the exact sparse-fieldset exception.
+- **Rationale:** One identity graph prevents alternate aliases from bypassing uniqueness and linkage checks.
+- **Security consequences:** Alias-aware uniqueness prevents identity confusion and duplicate-resource substitution.
+- **Resource consequences:** Graph traversal remains bounded by document resource and relationship limits.
+- **Compatibility consequences:** The sparse-fieldset exception applies only when the relevant relationship field was excluded.
+- **Wire consequences:** A resource cannot appear twice through alternate id and lid aliases.
+- **Executable evidence:** TestValidateLinksIncludedResourceThroughItsLocalIdentity, TestIncludedIdentityFollowsValidationContext, TestValidateWithAllowsSparseFieldsetFullLinkageException
+- **Fixture evidence:** testdata/valid/compound-document.json
+- **Fuzz evidence:** FuzzConstructedDocumentValidation
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** specification/differential.tsv
+- **Public APIs:** `Document.ValidateWith` and `ValidationOptions`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** No known erratum changes id and lid aliasing for compound documents.
+- **Reconsider when:** A future revision changes local identity or full-linkage semantics.
 
 ## JSONAPI-DEC-006: Sparse fieldsets
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Sparse Fieldsets](https://jsonapi.org/format/#fetching-sparse-fieldsets) |
-| Classification | Normative parsing and application policy |
-| Issue | The query grammar is standardized, but selecting fields from application resources and enforcing authorization require schema knowledge outside the document codec. |
-| Credible interpretations | Apply fieldsets directly to generic maps; parse only and leave projection to applications; or reject fieldsets without a registered schema. |
-| Known peer behavior | Framework peers commonly combine parsing and serialization, but no equivalent-work peer fixture is pinned for this transport-neutral package. |
-| Selected behavior | Parse `fields[type]` into ordered explicit field names and preserve empty presence. Applications own schema validation, authorization, and projection. Validation receives fieldset context only for the normative full-linkage exception. |
-| Security and resource consequences | The package never projects unknown application fields or makes authorization decisions. Callers must authorize and apply the bounded parsed fieldset before response construction. |
-| Compatibility and wire consequences | Ordered field names and explicit empty fieldsets are preserved. The generic document codec does not remove response members or invent a resource schema. |
-| Executable evidence | `TestParseQueryParameters`, `TestParseQueryPreservesExplicitEmptyIncludeAndSort`, `TestValidateWithAllowsSparseFieldsetFullLinkageException` |
-| Public surface | `Query.Fieldsets`, `QueryParser`, `ValidationOptions` |
-| Upstream record | JSON:API does not define an application schema registry. |
-| Reconsider when | A separate typed schema integration supplies a generic authorization-safe projection contract. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** omission
+- **Decision scope:** application-policy
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Sparse Fieldsets
+- **Requirement strength:** not specified
+- **Issue:** JSON:API standardizes fieldset syntax but not application schema, authorization, or projection behavior.
+- **Credible interpretations:**
+  - Project generic maps inside the package.
+  - Parse fieldsets and leave schema-aware projection to applications.
+- **Known peer behavior:** The pinned DataDog/jsonapi v0.13.0 harness applies fields[type] during marshaling; this package deliberately limits itself to parsing and preserves application ownership of projection.
+- **Selected behavior:** Parse ordered fields and preserve explicit empty presence while leaving schema validation, authorization, and projection to applications.
+- **Rationale:** Generic parsing cannot safely infer an application resource schema.
+- **Security consequences:** The package never projects or authorizes unknown application fields.
+- **Resource consequences:** Fieldset parsing remains bounded by query limits.
+- **Compatibility consequences:** Applications may apply their own typed schema and authorization policy.
+- **Wire consequences:** Ordered field names and explicit empty fieldsets are preserved.
+- **Executable evidence:** TestParseQueryParameters, TestParseQueryPreservesExplicitEmptyIncludeAndSort, TestValidateWithAllowsSparseFieldsetFullLinkageException
+- **Fixture evidence:** query_test.go
+- **Fuzz evidence:** FuzzParseQuery
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** specification/differential.tsv
+- **Public APIs:** `Query.Fieldsets`, `QueryParser`, and `ValidationOptions`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** JSON:API defines no application schema registry.
+- **Reconsider when:** A typed schema integration supplies an authorization-safe projection contract.
 
 ## JSONAPI-DEC-007: Pagination parameters and links
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Pagination](https://jsonapi.org/format/#fetching-pagination) and the [Cursor Pagination profile](http://jsonapi.org/profiles/ethanresnick/cursor-pagination/) |
-| Classification | Base implementation policy plus profile-specific normative behavior |
-| Issue | Base JSON:API reserves the `page` family but leaves strategy and parameter names implementation-owned. The Cursor profile defines a concrete strategy, links, metadata, and errors. |
-| Credible interpretations | Impose offset pagination globally; preserve opaque page parameters; or activate concrete rules only under an applied profile. |
-| Known peer behavior | No maintained peer fixture is pinned. The official Cursor profile examples and URI are treated as the profile authority. |
-| Selected behavior | Preserve generic base `page[...]` parameters without inventing offset semantics. Apply `page[size]`, `page[after]`, `page[before]`, stable sort, directional links, metadata, and error rules only through the Cursor profile API. Pagination links are valid only for collection primary data, and URL construction remains caller-owned. |
-| Security and resource consequences | Cursor values remain opaque and page sizes are bounded; applications still own cursor integrity, authorization, query cost, and URL construction. |
-| Compatibility and wire consequences | Base users retain arbitrary registered `page[...]` models. Cursor-profile users receive its exact parameters, links, metadata, and errors without imposing those wire rules on base JSON:API. |
-| Executable evidence | `TestParseQueryParameters`, `TestPaginationLinksRequireCollectionData`, `TestCursorPaginationParsesProfileParameters`, `TestValidateCursorPaginationLinks`, cursor page and metadata tests, `FuzzCursorPaginationQuery` |
-| Public surface | `Query.Page`, cursor parser, page validation, cursor metadata helpers |
-| Upstream record | The profile URI intentionally uses HTTP because that is the URI published by the profile. |
-| Reconsider when | JSON:API standardizes base pagination semantics or the Cursor profile publishes a compatible revision. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** optional behavior
+- **Decision scope:** extension-specific
+- **Specification:** JSON:API Cursor Pagination profile
+- **Version:** JSON:API Cursor Pagination at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-cursor-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_profiles/ethanresnick/cursor-pagination/index.md
+- **Section:** Query Parameters, Links, and Page Meta
+- **Requirement strength:** not specified
+- **Issue:** Base JSON:API leaves pagination strategy open while the optional Cursor profile defines concrete behavior.
+- **Credible interpretations:**
+  - Apply cursor rules to every page family.
+  - Activate cursor rules only through the profile API.
+- **Known peer behavior:** No maintained peer fixture is pinned; the published profile examples are retained as authority evidence.
+- **Selected behavior:** Preserve generic page parameters and activate Cursor profile parameters, links, metadata, and errors only through the profile API.
+- **Rationale:** Optional profile behavior must not become an implicit base JSON:API requirement.
+- **Security consequences:** Cursor values remain opaque and applications retain responsibility for integrity and authorization.
+- **Resource consequences:** Page size and cursor parsing are bounded by profile and query limits.
+- **Compatibility consequences:** Base users may retain non-cursor pagination strategies.
+- **Wire consequences:** The canonical profile URI remains `http://jsonapi.org/profiles/ethanresnick/cursor-pagination/` while its monitored document is retrieved over HTTPS.
+- **Executable evidence:** TestParseQueryParameters, TestPaginationLinksRequireCollectionData, TestCursorPaginationParsesProfileParameters, TestValidateCursorPaginationLinks
+- **Fixture evidence:** cursor_test.go, cursor_page_test.go
+- **Fuzz evidence:** FuzzCursorPaginationQuery
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** `Query.Page`, `CursorPagination`, `CursorPage`, and cursor metadata helpers
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** The Cursor Pagination profile remains a separately published optional profile.
+- **Reconsider when:** JSON:API standardizes base pagination or the profile publishes an incompatible revision.
 
 ## JSONAPI-DEC-008: Atomic operation order and rollback
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | Atomic Operations [Processing](https://jsonapi.org/ext/atomic/#processing) and [Operation Objects](https://jsonapi.org/ext/atomic/#operation-objects) |
-| Classification | Extension requirement and transaction-boundary policy |
-| Issue | Operations must be processed in order and as one atomic unit, but a reusable package cannot create an application database transaction itself. Commit ambiguity, callback panic, cancellation, and invalid results must not leak partial success. |
-| Credible interpretations | Validate document shape only; execute callbacks without transaction control; or require an explicit caller-supplied transaction lifecycle. |
-| Known peer behavior | No maintained cross-language executor fixture is pinned; the extension's processing rules are the authoritative behavior. |
-| Selected behavior | Validate before beginning. Use a caller-supplied transaction boundary, apply operations sequentially, validate positional results before commit, stop at the first failure or cancellation, and attempt rollback exactly once after any post-begin failure. Convert callback panics to bounded errors and preserve rollback failure without hiding the primary failure. |
-| Security and resource consequences | Validation precedes side effects, callbacks execute sequentially, panics become bounded errors, and cancellation stops further operations. The caller remains responsible for durable transaction isolation and commit-unknown handling. |
-| Compatibility and wire consequences | Results retain operation order and partial success is never emitted as a valid Atomic response. The package defines callback and error behavior but does not prescribe a datastore wire protocol. |
-| Executable evidence | `TestExecuteAtomicAppliesInOrderAndCommits`, `TestExecuteAtomicRollsBackAtFirstOperationFailure`, commit/rollback failure tests, panic and cancellation tests, invalid-result rollback tests |
-| Public surface | `ExecuteAtomic`, Atomic transaction and operation callback interfaces |
-| Upstream record | Atomic Operations remains an official JSON:API extension rather than base format text. |
-| Reconsider when | The extension revises processing order, result correspondence, or atomicity requirements. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** omission
+- **Decision scope:** defensive
+- **Specification:** JSON:API Atomic Operations extension
+- **Version:** JSON:API Atomic Operations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-atomic-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/ext/atomic/index.md
+- **Section:** Processing and Operation Objects
+- **Requirement strength:** not specified
+- **Issue:** Atomic Operations requires ordered all-or-nothing processing but does not define a reusable Go transaction lifecycle.
+- **Credible interpretations:**
+  - Validate document shape without execution support.
+  - Require a caller-supplied transaction lifecycle with bounded failure handling.
+- **Known peer behavior:** No maintained cross-language transaction executor fixture is pinned.
+- **Selected behavior:** Validate before beginning, apply operations in order, validate results before commit, and attempt rollback exactly once after a post-begin failure.
+- **Rationale:** An explicit transaction adapter preserves extension ordering while leaving datastore isolation application-owned.
+- **Security consequences:** Validation precedes side effects and callback panics become bounded typed errors.
+- **Resource consequences:** Callbacks execute sequentially and cancellation stops further operations.
+- **Compatibility consequences:** Applications retain responsibility for durable isolation and commit-unknown handling.
+- **Wire consequences:** Results preserve operation order and partial success is never emitted as a valid response.
+- **Executable evidence:** TestExecuteAtomicAppliesInOrderAndCommits, TestExecuteAtomicRollsBackAtFirstOperationFailure, TestExecuteAtomicRollsBackCommitFailure, TestExecuteAtomicConvertsApplyPanicAndRollsBack, TestExecuteAtomicStopsAndRollsBackOnCancellation
+- **Fixture evidence:** atomic_execute_test.go
+- **Fuzz evidence:** FuzzUnmarshalAtomic
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** `ExecuteAtomic`, `AtomicTransactionBeginner`, and `AtomicTransaction`
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** Atomic Operations remains an official extension rather than base format text.
+- **Reconsider when:** The extension changes processing order, result correspondence, or atomicity.
 
 ## JSONAPI-DEC-009: Recommendation status
-
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | Official [JSON:API Recommendations](https://jsonapi.org/recommendations/) |
-| Classification | Non-normative guidance |
-| Issue | Recommendations describe useful naming, URL, filtering, date/time, asynchronous, and method-override conventions but are not conformance requirements. |
-| Credible interpretations | Enforce recommendations as protocol rules; ignore them entirely; or document adoption guidance while keeping validation normative. |
-| Known peer behavior | Frameworks commonly enforce local URL and naming conventions, but no such convention is portable JSON:API conformance evidence. |
-| Selected behavior | Document and use recommendations in examples where useful, but never reject a base-compliant document solely for violating a recommendation. Routing, pluralization, filters, timestamps, asynchronous resources, and method override remain application or middleware policy. |
-| Security and resource consequences | Recommendation-only behavior cannot weaken validation or silently activate routing, method override, filtering, or asynchronous execution. Applications must secure any adopted convention independently. |
-| Compatibility and wire consequences | Base-compliant documents are not rejected for recommendation differences. Applications may add stricter conventions without those conventions becoming package-level wire requirements. |
-| Executable evidence | `TestParseQueryParameters`, `TestParseQueryPreservesExplicitEmptyIncludeAndSort`, and the recommendation authority matrix in `docs/recommendations.md` |
-| Public surface | Documentation and examples; no recommendation-only validator |
-| Upstream record | The recommendations page explicitly remains separate from the normative format. |
-| Reconsider when | A recommendation is promoted into normative base, extension, or profile text. |
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** optional behavior
+- **Decision scope:** recommended
+- **Specification:** JSON:API recommendations
+- **Version:** JSON:API recommendations at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-recommendations-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/recommendations/index.md
+- **Section:** Recommendations
+- **Requirement strength:** informative
+- **Issue:** JSON:API recommendations describe conventions that are not base conformance requirements.
+- **Credible interpretations:**
+  - Enforce recommendations as protocol validation.
+  - Document recommendations without making them package wire requirements.
+- **Known peer behavior:** Frameworks enforce local conventions, but those conventions are not portable conformance evidence.
+- **Selected behavior:** Document useful recommendations without rejecting a base-compliant document for recommendation differences.
+- **Rationale:** Informative guidance cannot be promoted into normative validation silently.
+- **Security consequences:** Recommendation-only behavior cannot activate routing, filtering, or method override implicitly.
+- **Resource consequences:** Applications remain responsible for bounding any convention-specific backend work.
+- **Compatibility consequences:** Applications may add stricter local conventions without changing package conformance.
+- **Wire consequences:** Base-compliant documents are accepted regardless of recommendation-only naming or URL conventions.
+- **Executable evidence:** TestParseQueryParameters, TestQueryParserAcceptsRegisteredCustomAndExtensionFamilies
+- **Fixture evidence:** query_test.go
+- **Fuzz evidence:** FuzzParseQuery
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** Documentation and examples; no recommendation-only validator
+- **Documentation:** docs/specification-decisions.md, docs/recommendations.md
+- **Upstream status:** The recommendations page remains separate from the normative format.
+- **Reconsider when:** A recommendation is promoted into normative base, extension, or profile text.
 
 ## JSONAPI-DEC-010: Conflicts between authorities
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** contradiction
+- **Decision scope:** defensive
+- **Specification:** JSON:API 1.1
+- **Version:** JSON:API 1.1 at json-api/json-api 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6
+- **Source authority:** jsonapi-1.1-source
+- **Authoritative URL:** https://raw.githubusercontent.com/json-api/json-api/52fc018adcc15358cb0f9d3de119f7e0fbe34ea6/_format/1.1/index.md
+- **Section:** Extensions, Profiles, and Conformance
+- **Requirement strength:** not specified
+- **Issue:** Base, extension, profile, recommendation, example, and application text have different authority and may conflict.
+- **Credible interpretations:**
+  - Let the most specific artifact override base behavior.
+  - Apply each artifact only within its declared authority and block unresolved contradictions.
+- **Known peer behavior:** Peer popularity does not determine normative authority.
+- **Selected behavior:** Apply base rules first, constrain extensions and profiles to their authority, treat recommendations as informative, and block unresolved direct contradictions.
+- **Rationale:** Separating authorities prevents lower-strength guidance from weakening base conformance.
+- **Security consequences:** Lower-authority artifacts cannot disable base validation or resource limits.
+- **Resource consequences:** Authority checks add no unbounded runtime work.
+- **Compatibility consequences:** Moving behavior between authority classes requires compatibility review.
+- **Wire consequences:** Base, extension, profile, recommendation, and application behavior remain separately labeled.
+- **Executable evidence:** TestCodecAppliesRegisteredProfileDocumentValidation, TestProfileValidatorCannotMutateValidatedDocument, TestExecuteAtomicAppliesInOrderAndCommits, TestCursorPaginationParsesProfileParameters
+- **Fixture evidence:** profile_codec_test.go
+- **Fuzz evidence:** FuzzMemberRegistry
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** All parsing, validation, negotiation, extension, and profile APIs
+- **Documentation:** docs/specification-decisions.md
+- **Upstream status:** No unresolved direct contradiction is recorded at this revision.
+- **Reconsider when:** A governing authority publishes a conflicting erratum or revision.
 
-| Field | Decision |
-| --- | --- |
-| Status and owner | `resolved`; `jsonapi` maintainers |
-| Source | JSON:API 1.1 [Extensions](https://jsonapi.org/format/#extensions), [Profiles](https://jsonapi.org/format/#profiles), Atomic Operations, Cursor Pagination, and Recommendations |
-| Classification | Normative source hierarchy and compatibility policy |
-| Issue | Base text, an extension, a profile, recommendations, examples, and application conventions have different authority. Merging them can silently weaken base rules or mislabel policy as conformance. |
-| Credible interpretations | Let the most specific artifact override base behavior; treat all official pages as equally normative; or apply each artifact only within its declared authority. |
-| Known peer behavior | No peer vote determines authority. Differential disagreement must be classified against the governing artifact. |
-| Selected behavior | Base normative text always applies. An applied extension may add specification semantics only within its namespace and declared scope. A profile may add implementation semantics but cannot alter base or extension rules. Recommendations and examples are informative. Application conventions cannot be reported as JSON:API requirements. A direct unresolved contradiction blocks release rather than being silently prioritized. |
-| Security and resource consequences | Lower-authority artifacts cannot disable base validation, resource limits, or extension namespace isolation. An unresolved contradiction fails closed at release review rather than selecting permissive behavior. |
-| Compatibility and wire consequences | Base, extension, profile, recommendation, referenced-standard, package-policy, and application-policy behavior remain separately labeled. Moving a decision between authorities is compatibility-sensitive. |
-| Executable evidence | `TestCodecAppliesRegisteredProfileDocumentValidation`, `TestProfileValidatorCannotMutateValidatedDocument`, `TestExecuteAtomicAppliesInOrderAndCommits`, and `TestCursorPaginationParsesProfileParameters` |
-| Public surface | All parsing, validation, negotiation, extension, profile, and documentation claims |
-| Upstream record | No unresolved direct contradiction is currently recorded. |
-| Reconsider when | A governing artifact publishes an erratum or revision that changes its authority or conflicts with another applied artifact. |
+## JSONAPI-DEC-011: Duplicate JSON object members
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** interoperability policy
+- **Decision scope:** defensive
+- **Specification:** RFC 8259 JSON
+- **Version:** RFC 8259
+- **Source authority:** rfc8259-source
+- **Authoritative URL:** https://www.rfc-editor.org/rfc/rfc8259.txt
+- **Section:** Section 4 Objects
+- **Requirement strength:** SHOULD
+- **Issue:** RFC 8259 says object names SHOULD be unique but records unpredictable receiver behavior when duplicates occur.
+- **Credible interpretations:**
+  - Retain the first value.
+  - Retain the last value.
+  - Expose every value.
+  - Reject the ambiguous object.
+- **Known peer behavior:** RFC 8259 records divergent peer behavior; no maintained JSON:API peer differential is assessed for nested duplicates.
+- **Selected behavior:** Reject duplicate members at every object depth and report the duplicate member JSON Pointer before semantic decoding.
+- **Rationale:** Failing closed prevents member smuggling and avoids selecting an undocumented first-value or last-value interpretation.
+- **Security consequences:** Ambiguous security-sensitive fields cannot be interpreted differently by downstream receivers.
+- **Resource consequences:** Duplicate detection shares the configured depth, member, value, and byte limits.
+- **Compatibility consequences:** Documents accepted by permissive first-value or last-value parsers can be rejected.
+- **Wire consequences:** No duplicate-bearing document is accepted or re-emitted.
+- **Executable evidence:** TestUnmarshalRejectsDuplicateObjectMembers, TestUnmarshalAtomicRejectsForbiddenAndMalformedMembers
+- **Fixture evidence:** duplicate_member_test.go
+- **Fuzz evidence:** FuzzUnmarshal, FuzzUnmarshalAtomic
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** Unmarshal, UnmarshalWith, Codec.Unmarshal, UnmarshalAtomic
+- **Documentation:** docs/specification-decisions.md, docs/conformance.md
+- **Upstream status:** RFC 8259 errata are monitored separately; no accepted erratum selects duplicate-member processing.
+- **Reconsider when:** A governing JSON or JSON:API revision defines a different deterministic duplicate-member policy.
+
+## JSONAPI-DEC-012: Link relation type validation
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** ambiguity
+- **Decision scope:** normative
+- **Specification:** RFC 8288 Web Linking
+- **Version:** RFC 8288
+- **Source authority:** rfc8288-source
+- **Authoritative URL:** https://www.rfc-editor.org/rfc/rfc8288.txt
+- **Section:** Section 3.3 Relation Types
+- **Requirement strength:** MUST
+- **Issue:** RFC 8288 distinguishes registered relation names from extension relation URIs while JSON:API exposes relation values inside link objects.
+- **Credible interpretations:**
+  - Accept any nonempty relation string.
+  - Accept a registered relation token or an absolute extension relation URI.
+- **Known peer behavior:** No maintained JSON:API peer comparison is assessed for the complete link-object relation grammar.
+- **Selected behavior:** Accept lowercase registered relation tokens using the RFC grammar and absolute extension relation URIs; reject spaces, underscores, relative references, and malformed URIs.
+- **Rationale:** The two RFC relation forms preserve interoperable registry names without treating application-relative values as globally identified extensions.
+- **Security consequences:** Strict relation parsing prevents ambiguous downstream tokenization and relative-URI reinterpretation.
+- **Resource consequences:** Relation validation is bounded by the containing document and link limits.
+- **Compatibility consequences:** Nonstandard relation spellings can be rejected even when another receiver treats them as opaque strings.
+- **Wire consequences:** Accepted relation values retain their exact registered token or absolute URI spelling.
+- **Executable evidence:** TestValidateRejectsInvalidLinkObjectMembers, TestRegisteredLinkRelationRejectsUnderscore
+- **Fixture evidence:** link_test.go
+- **Fuzz evidence:** FuzzConstructedDocumentValidation
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** LinkObject, Document.Validate, Marshal, Unmarshal
+- **Documentation:** docs/specification-decisions.md, docs/conformance.md
+- **Upstream status:** RFC 8288 errata are monitored separately; no accepted erratum changes the selected relation grammar.
+- **Reconsider when:** The IANA relation registry or a successor to RFC 8288 changes extension relation syntax.
+
+## JSONAPI-DEC-013: HTTP media range precedence and ties
+- **Status:** resolved
+- **Owner:** jsonapi maintainers
+- **Classification:** ambiguity
+- **Decision scope:** transport-specific
+- **Specification:** RFC 9110 HTTP Semantics
+- **Version:** RFC 9110
+- **Source authority:** rfc9110-source
+- **Authoritative URL:** https://www.rfc-editor.org/rfc/rfc9110.txt
+- **Section:** Section 12.5.1 Accept
+- **Requirement strength:** not specified
+- **Issue:** HTTP defines media-range precedence but does not select among equally acceptable JSON:API representations with different extension and profile sets.
+- **Credible interpretations:**
+  - Choose the first generated representation.
+  - Choose the first Accept occurrence.
+  - Apply specificity and quality before a deterministic canonical representation tie-break.
+- **Known peer behavior:** No maintained JSON:API negotiator peer is assessed for equal-quality extension and profile representation ties.
+- **Selected behavior:** Apply the most specific matching media range, retain its highest quality, and choose the lexically canonical supported JSON:API content type when representations remain tied.
+- **Rationale:** HTTP precedence controls client preference while a canonical final tie-break removes map and registration order from wire selection.
+- **Security consequences:** Strict quality parsing and deterministic selection prevent malformed or reordered headers from activating unsupported semantics.
+- **Resource consequences:** Candidate parsing and comparison remain bounded by negotiation limits.
+- **Compatibility consequences:** Equal-quality ties can select a different representation than first-match implementations.
+- **Wire consequences:** The selected Content-Type is stable for semantically equivalent supported candidate sets.
+- **Executable evidence:** TestNegotiateAcceptUsesSpecificityQualityAndCanonicalTieBreak, TestQualityForRepresentationHonorsSpecificityBeforeQuality, TestHTTPQualityGrammarBoundaries
+- **Fixture evidence:** negotiation_test.go
+- **Fuzz evidence:** FuzzNegotiation
+- **Interoperability evidence:** not assessed
+- **Differential evidence:** not assessed
+- **Public APIs:** Negotiator.NegotiateAccept, MediaType.String
+- **Documentation:** docs/specification-decisions.md, docs/conformance.md
+- **Upstream status:** RFC 9110 errata are monitored separately; no accepted erratum selects an application-specific JSON:API tie-break.
+- **Reconsider when:** An HTTP revision or JSON:API profile defines an explicit representation tie-break.
 
 ## Unresolved decisions
 
-No known normative interpretation is unresolved at this revision. Independent
-peer fixtures remain incomplete where noted and must be added before
-repository-wide interoperability completion can be claimed. New ambiguities
-remain unresolved until they receive a stable identifier, authority analysis,
-executable evidence, and maintainer disposition here.
+No known decision is unresolved at this revision. Maintained peer coverage is
+not claimed where a decision records only an official corpus or local contract.
+New ambiguities remain unresolved until they receive a stable identifier,
+authority analysis, executable evidence, and maintainer disposition.

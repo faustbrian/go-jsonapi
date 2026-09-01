@@ -8,6 +8,14 @@ description = "Generated local gate artifacts are not repository inputs."
 paths = ['''(?:^|/)\.artifacts(?:/.*)?$''']
 
 [[allowlists]]
+description = "Canonical JSON:API decision digests are public checksums."
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^CHANGELOG\.md$''']
+regexes = ['''^\s*-\s+JSONAPI-DEC-[0-9]{3}\s+sha256:[0-9a-f]{64}\s*$''']
+
+[[allowlists]]
 description = "The pinned public GitHub OpenAPI document contains example credentials."
 paths = ['''^(?:pkg/openapi/)?specification/independent/github-rest-api/api\.github\.com\.2022-11-28\.json$''']
 
