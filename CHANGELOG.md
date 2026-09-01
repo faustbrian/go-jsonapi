@@ -46,8 +46,9 @@ the observable protocol choices covered by these entries.
 - JSONAPI-DEC-009 sha256:ee3532533128439a7617e7da04fbbda13f30b14b7eb301190fd5712a1d2c0625
 - JSONAPI-DEC-010 sha256:6721f9d3ea09062d9665828d3e1f2127d3bd3d1d967d6214e01a164bc7b8b1f2
 
-- Use the centrally maintained Go library verification and CI contract at
-  `go-library-tools` v1.0.13.
+- Use the released `go-library-tools` v1.2.0 CLI and immutable merged
+  workflow at `1f9629e5f27418600460b55a50a5b2fc81697fab` so local and
+  hosted verification enforce the same specification-governance contract.
 
 ### Documentation
 
