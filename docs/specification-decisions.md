@@ -428,6 +428,12 @@ link to their replacement.
 - **Upstream status:** RFC 9110 errata are monitored separately; no accepted erratum selects an application-specific JSON:API tie-break.
 - **Reconsider when:** An HTTP revision or JSON:API profile defines an explicit representation tie-break.
 
+## Authority review history
+
+| Reviewed | Authority | Disposition | Decision impact |
+| --- | --- | --- | --- |
+| 2026-09-03 | RFC 9110 Erratum 9162 | Behavior-neutral. The reported change clarifies that repeated HTTP field lines are combined with comma-space. `NegotiateAccept` receives the caller-combined field value, splits on commas, and trims candidate whitespace, so comma and comma-space separators have identical results. | `JSONAPI-DEC-013` remains unchanged, including its precedence, quality, and canonical tie-break policy. The prior monitor digest was `38bd006c96f8963d58573f704c5313a5f81968b90738c03ade0b036ec7bbdf4b`; the reviewed response is now bound by `specification/monitoring.json`. |
+
 ## Unresolved decisions
 
 No known decision is unresolved at this revision. Maintained peer coverage is
