@@ -9,5 +9,5 @@ The harness is not an installable library and does not define application
 compatibility policy. Run it from the repository root with
 `make interoperability`.
 
-See the versioned [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.3.0/docs/ecosystem/README.md)
+See the versioned [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 for package-family and ownership guidance.
