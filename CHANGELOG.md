@@ -32,6 +32,12 @@ the observable protocol choices covered by these entries.
 
 ### Changed
 
+- Publish complete schema-v2 cohesion metadata and versioned Golib ecosystem
+  navigation for the JSON:API module and its interoperability harness.
+- Adopt the checksum-verified `go-library-tools` v1.3.0 CLI, add the local
+  `make cohesion` gate, and enforce the same cohesion contract through the
+  immutable shared workflow.
+
 - Pin JSON:API source text to an immutable upstream revision, monitor mutable
   update documents separately, and add an executable DataDog/jsonapi v0.13.0
   differential harness outside the public module.
