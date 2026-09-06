@@ -60,6 +60,11 @@ the observable protocol choices covered by these entries.
 
 ### Documentation
 
+- Link the compiler-checked quick start, clarify root and nested-module tag
+  syntax, and publish direct support, security, and project-navigation routes.
+- Correct the `v1.0.0` release date to match its signed tag and published
+  GitHub release.
+
 - Align repository automation and compatibility guidance with the stable-v1
   lifecycle and exact Go 1.26.6 minimum.
 
@@ -69,7 +74,7 @@ the observable protocol choices covered by these entries.
 - Replace archived monorepo and AI-generated documentation entry points with
   a standalone, human-oriented documentation structure.
 
-## [1.0.0] - 2026-08-25
+## [1.0.0] - 2026-08-26
 
 ### Fixed
 

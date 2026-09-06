@@ -16,10 +16,10 @@ profile, and the published JSON:API recommendations.
 
 ## Status
 
-The package has a stable v1 API. Its supported protocol surface is conformance-tested and
-production code is held to meaningful 100% statement coverage. Read the
-[compatibility policy](docs/compatibility.md) before adopting a
-revision.
+The package has a stable v1 API. Its supported protocol surface is
+conformance-tested and production code is held to meaningful 100% statement
+coverage. Read the [compatibility policy](docs/compatibility.md) before
+adopting a revision.
 
 ## Requirements
 
@@ -50,6 +50,9 @@ if err != nil {
 }
 ```
 
+The runnable [`ExampleMarshal`](examples_test.go) keeps this introductory flow
+compiler-checked.
+
 Decode untrusted input with `Unmarshal` or a configured `Codec`. Use
 request-specific validation contexts, bounded decoding, content negotiation,
 and query parsing as described in the [quickstart](docs/quickstart.md).
@@ -78,7 +81,9 @@ Start with the [documentation index](docs/README.md), [quickstart](docs/quicksta
 [conformance matrix](docs/conformance.md), [extensions and profiles](docs/extensions-and-profiles.md),
 [recommendations](docs/recommendations.md), [specification decision register](docs/specification-decisions.md),
 and [security model](docs/security.md) define the supported protocol surface.
-Release history is maintained in [CHANGELOG.md](CHANGELOG.md).
+Release history is maintained in [CHANGELOG.md](CHANGELOG.md). For help and
+responsible disclosure, use the [support](SUPPORT.md) and
+[security](SECURITY.md) policies.
 
 For ecosystem-wide selection and ownership guidance, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)

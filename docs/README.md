@@ -1,6 +1,13 @@
 # Documentation
 
 Use this index to evaluate specification coverage before production adoption.
+The root module is a stable v1 library and requires Go 1.26.6 or later.
+
+Install it with:
+
+```sh
+go get github.com/faustbrian/go-jsonapi
+```
 
 ## Getting started
 
@@ -35,4 +42,7 @@ Use this index to evaluate specification coverage before production adoption.
 
 - [Repository standards](repository-standards.md)
 - [Contributing](../CONTRIBUTING.md)
+- [Support](../SUPPORT.md)
+- [Security policy](../SECURITY.md)
 - [Release history](../CHANGELOG.md)
+- [License](../LICENSE)
