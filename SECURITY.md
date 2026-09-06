@@ -2,15 +2,17 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest stable v1 release and `main`.
-Additional supported release lines and end-of-support dates will be documented
-here when offered.
+Security fixes are applied to the latest published stable v1 release. The
+currently supported release is `v1.0.0`. Unreleased `main` is not a supported
+release. Additional supported release lines and end-of-support dates will be
+documented here when offered.
 
 ## Reporting A Vulnerability
 
-Use GitHub private vulnerability reporting for this repository. Include a
-minimal reproducer, expected and observed behavior, affected versions, impact,
-and any suggested mitigation. Do not include secrets or production data.
+Use [GitHub private vulnerability reporting](https://github.com/faustbrian/go-jsonapi/security/advisories/new)
+for this repository. Include a minimal reproducer, expected and observed
+behavior, affected versions, impact, and any suggested mitigation. Do not
+include secrets or production data.
 
 ## Response Process
 
@@ -20,7 +22,9 @@ disclosure should wait until a fix or agreed mitigation is available.
 
 ## Package Security Boundary
 
-Documents, query strings, media types, extension/profile callbacks, and pagination cursors are untrusted protocol inputs. Resource limits and callback isolation are part of the maintained security boundary.
+Documents, query strings, media types, extension/profile callbacks, and
+pagination cursors are untrusted protocol inputs. Resource limits and callback
+isolation are part of the maintained security boundary.
 
 ## Application Responsibilities
 
