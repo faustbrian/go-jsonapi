@@ -60,6 +60,9 @@ the observable protocol choices covered by these entries.
 
 ### Documentation
 
+- Align repository automation and compatibility guidance with the stable-v1
+  lifecycle and exact Go 1.26.6 minimum.
+
 - Clarify how shared safety-policy updates are coordinated across standalone
   repositories.
 

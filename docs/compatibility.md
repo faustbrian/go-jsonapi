@@ -9,10 +9,9 @@ when exported Go signatures do not change.
 
 The project follows Semantic Versioning.
 
-- Before `v1.0.0`, minor releases may refine public APIs, but changes must be
-  documented with migration guidance.
-- At and after `v1.0.0`, incompatible exported API or wire-format changes
-  require a new major version.
+- Incompatible exported API or wire-format changes after `v1.0.0` require a
+  new major version.
+- Backward-compatible additions use minor releases.
 - Patch releases fix defects without intentionally changing valid behavior.
 
 ## Governed surface
@@ -48,9 +47,10 @@ must include explicit release notes.
 
 ## Go support
 
-The initial package requires Go 1.24 or later. Raising the minimum Go version
-is announced in release notes and normally occurs in a minor release before
-v1, or according to a documented support window after v1.
+Stable v1 requires Go 1.26.6 or later. The exact minimum is declared in
+`go.mod`, `.go-version`, and `modules.json`. Raising it requires release notes
+and a new release; consumers on older toolchains remain on the last compatible
+release.
 
 ## Specification evolution
 
