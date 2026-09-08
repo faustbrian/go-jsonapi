@@ -48,9 +48,9 @@ must include explicit release notes.
 
 ## Go support
 
-The initial package requires Go 1.24 or later. Raising the minimum Go version
-is announced in release notes and normally occurs in a minor release before
-v1, or according to a documented support window after v1.
+The current v1 package requires Go 1.26.6 or later, matching the module's
+declared toolchain. Raising the minimum Go version is announced in release
+notes and requires an explicit compatibility review.
 
 ## Specification evolution
 

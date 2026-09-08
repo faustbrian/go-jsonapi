@@ -60,6 +60,8 @@ the observable protocol choices covered by these entries.
 
 ### Documentation
 
+- Update Go support documentation to the declared Go 1.26.6 minimum and link
+  the quick start to compiler-checked runnable examples.
 - Clarify how shared safety-policy updates are coordinated across standalone
   repositories.
 

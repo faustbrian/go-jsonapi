@@ -50,6 +50,11 @@ if err != nil {
 }
 ```
 
+This snippet is exercised by the compiler-checked
+[`ExampleMarshal`](examples_test.go#L12) example in
+[`examples_test.go`](examples_test.go). See the
+[examples guide](docs/examples.md) for the complete runnable example set.
+
 Decode untrusted input with `Unmarshal` or a configured `Codec`. Use
 request-specific validation contexts, bounded decoding, content negotiation,
 and query parsing as described in the [quickstart](docs/quickstart.md).
