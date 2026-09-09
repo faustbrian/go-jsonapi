@@ -178,6 +178,10 @@ unrelated change merely because the check exists.
 - Public modules SHOULD provide practical entry documentation appropriate to
   their consumers, such as a quick start, examples, adoption guidance,
   tradeoffs, security notes, or release notes where those sections are useful.
+- Public modules MUST document explicit limitations where they affect adoption.
+- The root README MUST remain a concise entry point. Detailed guides,
+  operations, audits, and maintainer material belong under `docs/` and MUST be
+  linked through `docs/README.md`.
 - Changed executable examples MUST compile. Other documentation MUST receive
   only the structural and link validation affected by the change.
 
