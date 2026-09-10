@@ -32,6 +32,7 @@ the observable protocol choices covered by these entries.
 
 ### Changed
 
+- Raise the minimum supported Go version from 1.26.6 to 1.27.0.
 - Record RFC 9110 Erratum 9162 as behavior-neutral because Accept candidates
   are whitespace-insensitive after comma-separated field values are combined.
 - Publish complete schema-v2 cohesion metadata and versioned Golib ecosystem
@@ -66,7 +67,7 @@ the observable protocol choices covered by these entries.
   GitHub release.
 
 - Align repository automation and compatibility guidance with the stable-v1
-  lifecycle and exact Go 1.26.6 minimum.
+  lifecycle and exact Go 1.27.0 minimum.
 
 - Clarify how shared safety-policy updates are coordinated across standalone
   repositories.

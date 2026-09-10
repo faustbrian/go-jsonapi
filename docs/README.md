@@ -1,7 +1,7 @@
 # Documentation
 
 Use this index to evaluate specification coverage before production adoption.
-The root module is a stable v1 library and requires Go 1.26.6 or later.
+The root module is a stable v1 library and requires Go 1.27.0 or later.
 
 Install it with:
 
