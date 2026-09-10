@@ -47,7 +47,7 @@ must include explicit release notes.
 
 ## Go support
 
-Stable v1 requires Go 1.26.6 or later. The exact minimum is declared in
+Stable v1 requires Go 1.27.0 or later. The exact minimum is declared in
 `go.mod`, `.go-version`, and `modules.json`. Raising it requires release notes
 and a new release; consumers on older toolchains remain on the last compatible
 release.

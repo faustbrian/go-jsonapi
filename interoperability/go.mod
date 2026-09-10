@@ -1,6 +1,6 @@
 module github.com/faustbrian/go-jsonapi/interoperability
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/DataDog/jsonapi v0.13.0

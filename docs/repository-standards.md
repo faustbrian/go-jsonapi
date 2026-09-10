@@ -32,7 +32,7 @@ concepts.
 
 Every repository provides pinned-SHA workflows for CI, benchmarks, scheduled
 fuzzing, security, and tagged releases. Stable-v1 repositories declare and
-test Go 1.26.6 as their exact supported minimum. Dependency review runs on pull
+test Go 1.27.0 as their exact supported minimum. Dependency review runs on pull
 requests; reachable dependency scanning uses `govulncheck`.
 
 The common Make interface is `format`, `format-check`, `test`,
