@@ -69,7 +69,7 @@ func TestDuplicateScannerRejectsTruncatedAndUnexpectedTokens(t *testing.T) {
 	}{
 		{payload: "", path: ""},
 		{payload: `{"member":`, path: "/member"},
-		{payload: `[`, path: ""},
+		{payload: `[`, path: "/0"},
 		{payload: `}`, path: ""},
 		{payload: `{1`, path: ""},
 	}
