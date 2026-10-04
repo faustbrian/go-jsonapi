@@ -42,7 +42,17 @@ func TestCursorAdmissionSecurityRejectsDirectOversizeInputs(t *testing.T) {
 			return jsonapi.Query{Page: jsonapi.ParameterFamily{"page[after]": make([]string, limits.MaxValues+1)}}
 		}, false},
 		{"sort count", func() jsonapi.Query {
-			return jsonapi.Query{Sort: make([]jsonapi.SortField, limits.MaxListItems+1)}
+			return jsonapi.Query{Page: jsonapi.ParameterFamily{"page[after]": {"admitted"}}, Sort: make([]jsonapi.SortField, limits.MaxListItems+1)}
+		}, true},
+		{"aggregate bytes", func() jsonapi.Query {
+			family := make(jsonapi.ParameterFamily)
+			for i := 0; i < limits.MaxTotalBytes/limits.MaxValueBytes+1; i++ {
+				family[fmt.Sprintf("page[unknown%d]", i)] = []string{strings.Repeat("x", limits.MaxValueBytes)}
+			}
+			return jsonapi.Query{Page: family}
+		}, false},
+		{"encoded sort bytes", func() jsonapi.Query {
+			return jsonapi.Query{Page: jsonapi.ParameterFamily{"page[after]": {"admitted"}}, Sort: []jsonapi.SortField{{Name: strings.Repeat("x", limits.MaxValueBytes-1), Descending: true}, {Name: "id"}}}
 		}, true},
 		{"sort name bytes", func() jsonapi.Query {
 			return jsonapi.Query{Sort: []jsonapi.SortField{{Name: strings.Repeat("x", limits.MaxValueBytes+1)}}}
@@ -72,6 +82,9 @@ func TestCursorAdmissionSecurityRejectsDirectOversizeInputs(t *testing.T) {
 			var failure *jsonapi.CursorPaginationError
 			if !errors.As(err, &failure) || failure.Status != 400 || failure.Code != "limit" {
 				t.Errorf("wanted typed HTTP400 limit refusal; got %T", err)
+			}
+			if failure != nil && (failure.Cause != nil || failure.Parameter != "" || failure.Message != "cursor pagination input exceeds resource limits") {
+				t.Error("limit refusal was not fixed and redacted")
 			}
 			if !reflect.DeepEqual(request, jsonapi.CursorPageRequest{}) {
 				t.Error("refusal returned a partial request")

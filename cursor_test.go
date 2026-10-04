@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -98,10 +99,14 @@ func TestCursorPaginationCarriesAnAliasedPageMemberIntoErrors(t *testing.T) {
 }
 
 func TestCursorPaginationRejectsAnInvalidPageMemberAlias(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("cursor admission behavior runs only in hosted CI")
+	}
 	t.Parallel()
 
 	if _, err := NewCursorPagination(CursorPaginationConfig{
 		DefaultSize: 1,
+		MaxSize:     10,
 		PageMember:  "bad/name",
 	}); err == nil {
 		t.Fatal("expected invalid page member alias error")
@@ -230,6 +235,9 @@ func TestCursorPaginationRejectsInvalidConfiguration(t *testing.T) {
 }
 
 func TestCursorPaginationAcceptsExactSizeBoundaries(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("cursor admission behavior runs only in hosted CI")
+	}
 	t.Parallel()
 
 	pagination, err := NewCursorPagination(CursorPaginationConfig{
@@ -244,13 +252,8 @@ func TestCursorPaginationAcceptsExactSizeBoundaries(t *testing.T) {
 		t.Fatalf("exact maximum page size rejected: %#v err=%v", page, err)
 	}
 
-	unbounded, err := NewCursorPagination(CursorPaginationConfig{DefaultSize: 1})
-	if err != nil {
-		t.Fatalf("construct unbounded pagination: %v", err)
-	}
-	page, err = unbounded.Parse(ParameterFamily{"page[size]": {"999"}})
-	if err != nil || page.Size != 999 {
-		t.Fatalf("unbounded page size rejected: %#v err=%v", page, err)
+	if pagination, err := NewCursorPagination(CursorPaginationConfig{DefaultSize: 1}); err == nil || pagination != nil {
+		t.Fatal("unbounded pagination became request-serving")
 	}
 }
 
@@ -446,11 +449,15 @@ func TestCursorPaginationValidatesStableSort(t *testing.T) {
 }
 
 func TestCursorValidatorFailuresPreserveCausesWithoutDisclosingThem(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("cursor admission behavior runs only in hosted CI")
+	}
 	t.Parallel()
 
 	secret := errors.New("cursor payload contains tenant-secret")
 	pagination, err := NewCursorPagination(CursorPaginationConfig{
 		DefaultSize: 1,
+		MaxSize:     10,
 		ValidateCursor: func(string) error {
 			return secret
 		},

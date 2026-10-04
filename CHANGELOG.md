@@ -32,6 +32,10 @@ the observable protocol choices covered by these entries.
 
 ### Changed
 
+- Require an explicit positive cursor-pagination maximum. Direct page and sort
+  inputs now obey the default query resource limits before callbacks or sorting;
+  admission failures return fixed, redacted errors without partial requests.
+  This narrows the v1 unbounded-pagination policy and requires v2 adoption.
 - Raise the minimum supported Go version from 1.26.6 to 1.27.0.
 - Record RFC 9110 Erratum 9162 as behavior-neutral because Accept candidates
   are whitespace-insensitive after comma-separated field values are combined.
