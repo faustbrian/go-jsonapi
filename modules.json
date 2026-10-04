@@ -5,14 +5,14 @@
   "modules": [
     {
       "directory": ".",
-      "module_path": "github.com/faustbrian/go-jsonapi",
+      "module_path": "github.com/faustbrian/go-jsonapi/v2",
       "go_version": "1.27.0",
       "packages": [
         {
           "module_directory": ".",
           "directory": ".",
           "name": "jsonapi",
-          "import_path": "github.com/faustbrian/go-jsonapi",
+          "import_path": "github.com/faustbrian/go-jsonapi/v2",
           "kind": "public",
           "production": true,
           "executable": true,
@@ -24,12 +24,12 @@
       "purpose": "`jsonapi` is a strict, framework-agnostic implementation of JSON:API 1.1, the official Atomic Operations extension, the official Cursor Pagination profile, and the published JSON:API recommendations.",
       "lifecycle": "stable",
       "kind": "public library",
-      "releasable": true,
+      "releasable": false,
       "family": "protocols-and-descriptions",
       "family_label": "Protocols And Descriptions",
       "family_description": "Standards, envelopes, schemas, descriptions, signatures, and wire interoperability.",
       "family_order": 3,
-      "version": "1.0.0",
+      "version": "2.0.0",
       "tag_prefix": "v",
       "owned_dependencies": [],
       "reverse_owned_dependencies": [
@@ -80,10 +80,10 @@
         ],
         "public_package_identifier": "jsonapi",
         "primary_entry_packages": [
-          "github.com/faustbrian/go-jsonapi"
+          "github.com/faustbrian/go-jsonapi/v2"
         ],
         "package_selection": {
-          "github.com/faustbrian/go-jsonapi": "Use for strict JSON:API 1.1 documents, negotiation, queries, Atomic Operations, Cursor Pagination, and explicitly registered extensions or profiles."
+          "github.com/faustbrian/go-jsonapi/v2": "Use for strict JSON:API 1.1 documents, negotiation, queries, Atomic Operations, Cursor Pagination, and explicitly registered extensions or profiles."
         },
         "lifecycle_status": "active",
         "maturity": "stable",
@@ -140,7 +140,7 @@
           "examples": "docs/examples.md",
           "faq": "docs/faq.md",
           "changelog": "CHANGELOG.md",
-          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-jsonapi",
+          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-jsonapi/v2",
           "ecosystem_index": "https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md"
         },
         "known_good_compatibility_sets": [],
@@ -193,7 +193,7 @@
       "version": "unreleased",
       "tag_prefix": "interoperability/v",
       "owned_dependencies": [
-        "github.com/faustbrian/go-jsonapi"
+        "github.com/faustbrian/go-jsonapi/v2"
       ],
       "reverse_owned_dependencies": [],
       "external_runtime_dependencies": [

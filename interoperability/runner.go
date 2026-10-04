@@ -11,7 +11,7 @@ import (
 	"runtime/debug"
 
 	peer "github.com/DataDog/jsonapi"
-	local "github.com/faustbrian/go-jsonapi"
+	local "github.com/faustbrian/go-jsonapi/v2"
 )
 
 const (

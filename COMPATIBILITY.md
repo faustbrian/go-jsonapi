@@ -1,5 +1,11 @@
 # Compatibility Policy
 
+The current root source is the unpublished
+`github.com/faustbrian/go-jsonapi/v2` module. The latest published stable
+release remains `v1.0.0`. Finite cursor admission intentionally narrows v1
+behavior; see [migration guidance](docs/migration.md). A v2 API snapshot does
+not establish compatibility with v1.
+
 Each releasable directory is an independent Go module and follows semantic
 versioning. The root module uses `v<version>` tags. An independently releasable
 nested module uses `<module-directory>/v<version>` tags; the current

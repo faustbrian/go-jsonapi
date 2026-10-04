@@ -6,7 +6,7 @@
       "module_directory": ".",
       "directory": ".",
       "name": "jsonapi",
-      "import_path": "github.com/faustbrian/go-jsonapi",
+      "import_path": "github.com/faustbrian/go-jsonapi/v2",
       "kind": "public",
       "production": true,
       "executable": true,

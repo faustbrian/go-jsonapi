@@ -32,6 +32,8 @@ the observable protocol choices covered by these entries.
 
 ### Changed
 
+- Prepare the unpublished `github.com/faustbrian/go-jsonapi/v2` module and
+  migration guidance. The latest published stable release remains `v1.0.0`.
 - Require an explicit positive cursor-pagination maximum. Direct page and sort
   inputs now obey the default query resource limits before callbacks or sorting;
   admission failures return fixed, redacted errors without partial requests.

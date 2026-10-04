@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	jsonapi "github.com/faustbrian/go-jsonapi"
+	jsonapi "github.com/faustbrian/go-jsonapi/v2"
 )
 
 func TestCursorAdmissionSecurityRejectsDirectOversizeInputs(t *testing.T) {
