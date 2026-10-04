@@ -5,9 +5,9 @@ the pinned `github.com/DataDog/jsonapi` v0.13.0 maintained peer. It exists only
 as attributable conformance evidence for the public
 `github.com/faustbrian/go-jsonapi/v2` module, currently unpublished.
 
-The harness keeps its existing internal module identity and uses a relative
-replacement only to exercise the unpublished parent source. It is not release
-or clean-public-consumer evidence; the public module has no replacement.
+The harness keeps its existing internal module identity and pins the reviewed
+v2 source through an immutable public commit. It uses no replacement and does
+not claim a tagged release or tagged-release consumer qualification.
 
 The harness is not an installable library and does not define application
 compatibility policy. Run it from the repository root with
