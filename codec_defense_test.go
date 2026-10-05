@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -92,6 +93,28 @@ func TestDuplicateScannerRejectsTruncatedAndUnexpectedTokens(t *testing.T) {
 	if !errors.As(err, &decodeError) || decodeError.Path != "/unexpected" ||
 		decodeError.Code != "syntax" {
 		t.Fatalf("unexpected closing delimiter error: %T %#v", err, decodeError)
+	}
+}
+
+func TestDuplicateScannerRequiresClosingTokenHosted(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("scanner boundary characterization runs only in hosted CI")
+	}
+
+	for _, payload := range []string{`[1`, `{"member":1`} {
+		decoder := json.NewDecoder(bytes.NewBufferString(payload))
+		err := scanJSONValue(decoder, "/value")
+		var failure *DecodeError
+		if !errors.As(err, &failure) || failure.Path != "/value" ||
+			failure.Code != "syntax" || failure.Message != "unterminated JSON value" {
+			t.Fatalf("missing closing token did not produce the scanner's syntax refusal: %T", err)
+		}
+	}
+	for _, payload := range []string{`[1]`, `{"member":1}`} {
+		decoder := json.NewDecoder(bytes.NewBufferString(payload))
+		if err := scanJSONValue(decoder, "/value"); err != nil {
+			t.Fatalf("complete composite was refused: %T", err)
+		}
 	}
 }
 

@@ -30,6 +30,29 @@ func TestCursorAdmissionSecurityRejectsDirectOversizeInputs(t *testing.T) {
 			}
 			return jsonapi.Query{Page: family}
 		}, false},
+		{"sort reserves a parameter", func() jsonapi.Query {
+			family := make(jsonapi.ParameterFamily, limits.MaxParameters)
+			for i := 0; i < limits.MaxParameters; i++ {
+				family[fmt.Sprintf("page[unknown%d]", i)] = []string{"value"}
+			}
+			return jsonapi.Query{Page: family, Sort: []jsonapi.SortField{{Name: "id"}}}
+		}, true},
+		{"sort reserves a value", func() jsonapi.Query {
+			return jsonapi.Query{
+				Page: jsonapi.ParameterFamily{"page[after]": make([]string, limits.MaxValues)},
+				Sort: []jsonapi.SortField{{Name: "id"}},
+			}
+		}, true},
+		{"sort reserves name bytes", func() jsonapi.Query {
+			var values []string
+			remaining := limits.MaxTotalBytes - len("sort") + 1 - len("page[after]")
+			for remaining > 0 {
+				size := min(remaining, limits.MaxValueBytes)
+				values = append(values, strings.Repeat("x", size))
+				remaining -= size
+			}
+			return jsonapi.Query{Page: jsonapi.ParameterFamily{"page[after]": values}, Sort: []jsonapi.SortField{{Name: "id"}}}
+		}, true},
 		{"name bytes", func() jsonapi.Query {
 			name := marker + strings.Repeat("x", limits.MaxNameBytes+1-len(marker))
 			return jsonapi.Query{Page: jsonapi.ParameterFamily{name: {"value"}}}
