@@ -101,13 +101,16 @@ func TestDuplicateScannerRequiresClosingTokenHosted(t *testing.T) {
 		t.Skip("scanner boundary characterization runs only in hosted CI")
 	}
 
-	for _, payload := range []string{`[1`, `{"member":1`} {
+	for _, payload := range []string{`[1 `, `{"member":1 `} {
 		decoder := json.NewDecoder(bytes.NewBufferString(payload))
 		err := scanJSONValue(decoder, "/value")
 		var failure *DecodeError
 		if !errors.As(err, &failure) || failure.Path != "/value" ||
 			failure.Code != "syntax" || failure.Message != "unterminated JSON value" {
-			t.Fatalf("missing closing token did not produce the scanner's syntax refusal: %T", err)
+			if failure != nil {
+				t.Fatalf("missing closing token refusal: path=%q code=%q message=%q", failure.Path, failure.Code, failure.Message)
+			}
+			t.Fatalf("missing closing token did not produce a typed syntax refusal: %T", err)
 		}
 	}
 	for _, payload := range []string{`[1]`, `{"member":1}`} {
