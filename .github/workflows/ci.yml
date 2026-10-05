@@ -79,9 +79,10 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: faustbrian/go-library-tools
-          ref: 64c08f5d1a5973ee3ebd88e8dbd5bbbda14ab8e7
+          ref: cf41b6984a84deadd0986e6cfe16c7f6e23bc18b
           path: coverage-tooling
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.27.0'
@@ -98,13 +99,35 @@ jobs:
         run: |
           set -euo pipefail
           "${GOTMPDIR}/golib" coverage --module .
-      - name: Verify native scanner diagnostics
+      - name: Verify pre-fix metadata regression sensitivity
         if: inputs.security_diagnostic && !inputs.coverage_diagnostic
         working-directory: coverage-tooling
         run: |
           set -euo pipefail
+          git show 64c08f5d1a5973ee3ebd88e8dbd5bbbda14ab8e7:internal/gates/runner.go >"${GOTMPDIR}/scanner-before.go"
+          jq -n --arg source "${PWD}/internal/gates/runner.go" \
+            --arg before "${GOTMPDIR}/scanner-before.go" \
+            '{Replace: {($source): $before}}' >"${GOTMPDIR}/scanner-before-overlay.json"
+          if go test -p 1 -overlay="${GOTMPDIR}/scanner-before-overlay.json" \
+            ./internal/gates -run '^TestSecretScannerMetadataHosted$' -count=1 \
+            >"${GOTMPDIR}/scanner-before.log" 2>&1; then
+            echo 'Pre-fix metadata regression did not fail'
+            exit 1
+          fi
+          if ! rg -q 'missing safe finding location' "${GOTMPDIR}/scanner-before.log"; then
+            echo 'Pre-fix regression did not reach the expected assertion'
+            exit 1
+          fi
+          echo 'Pre-fix metadata regression failed at the expected assertion'
+      - name: Verify native scanner diagnostics
+        if: inputs.security_diagnostic && !inputs.coverage_diagnostic
+        working-directory: coverage-tooling
+        env:
+          GOLIB_GITLEAKS_INTEGRATION: '1'
+        run: |
+          set -euo pipefail
           go test -p 1 ./internal/gates \
-            -run '^(TestSecretScannerFailureClassificationWithoutOutput|TestBoundedProcessOutputNotifiesOnceOutsideLock|TestBoundedProcessOutputNotifiesLateSubscriber|TestLocalRunsBoundedPullRequestContract|TestCheckRunsSecurityTools)$' \
+            -run '^(TestSecretScannerMetadataHosted|TestSecretScannerFailureClassificationWithoutOutput|TestBoundedProcessOutputNotifiesOnceOutsideLock|TestBoundedProcessOutputNotifiesLateSubscriber|TestLocalRunsBoundedPullRequestContract|TestCheckRunsSecurityTools|TestRunSecurityScansUploadPackHiddenHistory|TestRunSecurityRejectsTransientGitleaksIgnore)$' \
             -count=1
       - name: Run root native security and bounded checks
         if: inputs.security_diagnostic && !inputs.coverage_diagnostic
