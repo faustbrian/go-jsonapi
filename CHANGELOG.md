@@ -7,6 +7,8 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-05
+
 The [specification decision register](docs/specification-decisions.md) records
 the observable protocol choices covered by these entries.
 
@@ -31,6 +33,9 @@ the observable protocol choices covered by these entries.
 - JSONAPI-DEC-013 sha256:9b156b1aaf44e12eb6f10ee74a737c981aec3f898b94fad1f547ac2e68c57e04
 
 ### Changed
+
+- Update language-tag validation to x/text 0.42.0 while preserving the
+  published JSON:API API and wire behavior.
 
 - Raise the minimum supported Go version from 1.26.6 to 1.27.0.
 - Record RFC 9110 Erratum 9162 as behavior-neutral because Accept candidates
