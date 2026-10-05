@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      security_diagnostic:
+        description: Run development-only native security and bounded checks instead of aggregate CI
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -25,15 +30,15 @@ permissions:
 
 jobs:
   ci:
-    if: github.event_name != 'workflow_dispatch' || !inputs.coverage_diagnostic
+    if: github.event_name != 'workflow_dispatch' || !(inputs.coverage_diagnostic || inputs.security_diagnostic)
     uses: faustbrian/go-library-tools/.github/workflows/library-ci.yml@47269f1aa78baa637a8c377b0af24c113b34c1c9 # v1.7.2 legacy workflow compatibility
     with:
       tooling_sha: 47269f1aa78baa637a8c377b0af24c113b34c1c9
       release_dry_run: ${{ inputs.release_dry_run || false }}
 
   coverage-diagnostic:
-    name: Native coverage diagnostic (development only)
-    if: github.event_name == 'workflow_dispatch' && inputs.coverage_diagnostic
+    name: Native diagnostic (development only)
+    if: github.event_name == 'workflow_dispatch' && (inputs.coverage_diagnostic || inputs.security_diagnostic)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -44,20 +49,32 @@ jobs:
       GOMAXPROCS: '2'
       GOFLAGS: -p=1
     steps:
+      - name: Require exactly one native diagnostic
+        env:
+          COVERAGE_DIAGNOSTIC: ${{ inputs.coverage_diagnostic }}
+          SECURITY_DIAGNOSTIC: ${{ inputs.security_diagnostic }}
+        run: |
+          set -euo pipefail
+          case "${COVERAGE_DIAGNOSTIC}:${SECURITY_DIAGNOSTIC}" in
+            true:false|false:true) ;;
+            *) exit 1 ;;
+          esac
       - name: Initialize task-owned caches
         env:
           TASK_ROOT: ${{ runner.temp }}/golib-coverage-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          mkdir -p "${TASK_ROOT}/build" "${TASK_ROOT}/modules" "${TASK_ROOT}/tmp"
-          printf 'GOCACHE=%s\nGOMODCACHE=%s\nGOTMPDIR=%s\n' \
-            "${TASK_ROOT}/build" "${TASK_ROOT}/modules" "${TASK_ROOT}/tmp" >>"${GITHUB_ENV}"
+          mkdir -p "${TASK_ROOT}/build" "${TASK_ROOT}/modules" "${TASK_ROOT}/tmp" "${TASK_ROOT}/lint"
+          printf 'GOCACHE=%s\nGOMODCACHE=%s\nGOTMPDIR=%s\nGOLANGCI_LINT_CACHE=%s\nTMPDIR=%s\n' \
+            "${TASK_ROOT}/build" "${TASK_ROOT}/modules" "${TASK_ROOT}/tmp" \
+            "${TASK_ROOT}/lint" "${TASK_ROOT}/tmp" >>"${GITHUB_ENV}"
       - name: Check out producer at dispatch head
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.sha }}
           path: producer
           persist-credentials: false
+          fetch-depth: 0
       - name: Check out immutable diagnostic tooling
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -76,10 +93,17 @@ jobs:
           mkdir -p "${GOCACHE}" "${GOMODCACHE}" "${GOTMPDIR}"
           go build -p 1 -trimpath -buildvcs=false -o "${GOTMPDIR}/golib" ./cmd/golib
       - name: Run root native coverage with declared services
+        if: inputs.coverage_diagnostic && !inputs.security_diagnostic
         working-directory: producer
         run: |
           set -euo pipefail
           "${GOTMPDIR}/golib" coverage --module .
+      - name: Run root native security and bounded checks
+        if: inputs.security_diagnostic && !inputs.coverage_diagnostic
+        working-directory: producer
+        run: |
+          set -euo pipefail
+          "${GOTMPDIR}/golib" check --local --module .
       - name: Remove task-owned diagnostic resources
         if: always()
         env:
