@@ -114,7 +114,7 @@ jobs:
             echo 'Pre-fix metadata regression did not fail'
             exit 1
           fi
-          if ! rg -q 'missing safe finding location' "${GOTMPDIR}/scanner-before.log"; then
+          if ! grep -q 'missing safe finding location' "${GOTMPDIR}/scanner-before.log"; then
             echo 'Pre-fix regression did not reach the expected assertion'
             exit 1
           fi
