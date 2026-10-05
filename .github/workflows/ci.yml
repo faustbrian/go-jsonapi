@@ -79,10 +79,10 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: faustbrian/go-library-tools
-          ref: cf41b6984a84deadd0986e6cfe16c7f6e23bc18b
+          ref: 71862edbff6d1cb69e250164ffac0a344eba8e81
           path: coverage-tooling
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 4
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.27.0'
@@ -119,6 +119,29 @@ jobs:
             exit 1
           fi
           echo 'Pre-fix metadata regression failed at the expected assertion'
+      - name: Verify pre-fix decision-digest regression sensitivity
+        if: inputs.security_diagnostic && !inputs.coverage_diagnostic
+        working-directory: coverage-tooling
+        env:
+          GOLIB_GITLEAKS_INTEGRATION: '1'
+        run: |
+          set -euo pipefail
+          git show cf41b6984a84deadd0986e6cfe16c7f6e23bc18b:internal/gates/runner.go >"${GOTMPDIR}/policy-before.go"
+          jq -n --arg source "${PWD}/internal/gates/runner.go" \
+            --arg before "${GOTMPDIR}/policy-before.go" \
+            '{Replace: {($source): $before}}' >"${GOTMPDIR}/policy-before-overlay.json"
+          if go test -p 1 -overlay="${GOTMPDIR}/policy-before-overlay.json" \
+            ./internal/gates -run '^TestJSONAPIDecisionDigestPolicyHosted$' -count=1 \
+            >"${GOTMPDIR}/policy-before.log" 2>&1; then
+            echo 'Pre-fix decision-digest regression did not fail'
+            exit 1
+          fi
+          if ! grep -q 'git: exact public decision records remain scanner findings (count=23)' "${GOTMPDIR}/policy-before.log" || \
+             ! grep -q 'dir: exact public decision records remain scanner findings (count=23)' "${GOTMPDIR}/policy-before.log"; then
+            echo 'Pre-fix decision-digest regression did not reach the expected assertion'
+            exit 1
+          fi
+          echo 'Pre-fix decision-digest regression failed at the expected assertion'
       - name: Verify native scanner diagnostics
         if: inputs.security_diagnostic && !inputs.coverage_diagnostic
         working-directory: coverage-tooling
@@ -127,7 +150,7 @@ jobs:
         run: |
           set -euo pipefail
           go test -p 1 ./internal/gates \
-            -run '^(TestSecretScannerMetadataHosted|TestSecretScannerFailureClassificationWithoutOutput|TestBoundedProcessOutputNotifiesOnceOutsideLock|TestBoundedProcessOutputNotifiesLateSubscriber|TestLocalRunsBoundedPullRequestContract|TestCheckRunsSecurityTools|TestRunSecurityScansUploadPackHiddenHistory|TestRunSecurityRejectsTransientGitleaksIgnore)$' \
+            -run '^(TestJSONAPIDecisionDigestPolicyHosted|TestSecretScannerMetadataHosted|TestSecretScannerFailureClassificationWithoutOutput|TestBoundedProcessOutputNotifiesOnceOutsideLock|TestBoundedProcessOutputNotifiesLateSubscriber|TestLocalRunsBoundedPullRequestContract|TestCheckRunsSecurityTools|TestRunSecurityScansUploadPackHiddenHistory|TestRunSecurityRejectsTransientGitleaksIgnore)$' \
             -count=1
       - name: Run root native security and bounded checks
         if: inputs.security_diagnostic && !inputs.coverage_diagnostic
