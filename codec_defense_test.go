@@ -167,6 +167,75 @@ func TestAtAndNonCompliantMembersAreIgnored(t *testing.T) {
 	}
 }
 
+func TestUnmarshalRetainsAllLinksBesideAnnotations(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoders := []struct {
+		name    string
+		decode  func([]byte) (Document, error)
+		marshal func(Document) ([]byte, error)
+	}{
+		{"core", Unmarshal, Marshal},
+		{"configured", codec.Unmarshal, codec.Marshal},
+	}
+	payload := []byte(`{"links":{"@annotation":false,"self":"/articles","next":{"href":"/articles?page=2"},"related":null,"last":"/articles?page=9"},"data":[]}`)
+	want := `{"links":{"last":"/articles?page=9","next":{"href":"/articles?page=2"},"related":null,"self":"/articles"},"data":[]}`
+	for _, decoder := range decoders {
+		t.Run(decoder.name, func(t *testing.T) {
+			// Decode fresh maps to exercise different links-object traversal orders.
+			for range 64 {
+				document, decodeErr := decoder.decode(payload)
+				if decodeErr != nil {
+					t.Fatalf("decode links beside annotation: %v", decodeErr)
+				}
+				encoded, encodeErr := decoder.marshal(document)
+				if encodeErr != nil {
+					t.Fatalf("encode retained links: %v", encodeErr)
+				}
+				if string(encoded) != want {
+					t.Fatalf("lost or altered links: got %s, want %s", encoded, want)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalRejectsInvalidLinksBesideAnnotations(t *testing.T) {
+	t.Parallel()
+
+	codec, err := NewCodec(CodecOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoders := []struct {
+		name   string
+		decode func([]byte) (Document, error)
+	}{
+		{"core", Unmarshal},
+		{"configured", codec.Unmarshal},
+	}
+	for _, decoder := range decoders {
+		t.Run(decoder.name, func(t *testing.T) {
+			for _, payload := range []string{
+				`{"links":{"self":true},"data":null}`,
+				`{"links":{"@annotation":[],"self":true},"data":null}`,
+			} {
+				for range 64 {
+					_, decodeErr := decoder.decode([]byte(payload))
+					var failure *DecodeError
+					if !errors.As(decodeErr, &failure) || failure.Code != "type" || failure.Path != "/links/self" {
+						t.Fatalf("invalid ordinary link escaped validation: %T %#v", decodeErr, failure)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestUnmarshalPreservesNullLink(t *testing.T) {
 	t.Parallel()
 
