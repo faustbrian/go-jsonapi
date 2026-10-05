@@ -95,6 +95,22 @@ func TestDuplicateScannerRejectsTruncatedAndUnexpectedTokens(t *testing.T) {
 	}
 }
 
+func TestDuplicateScannerRejectsMismatchedCompositeClosingDelimiter(t *testing.T) {
+	t.Parallel()
+
+	for _, payload := range []string{`{"member":1]`, `[1}`} {
+		decoder := json.NewDecoder(bytes.NewBufferString(payload))
+		err := scanJSONValue(decoder, "/nested")
+		var decodeError *DecodeError
+		var syntaxError *json.SyntaxError
+		if !errors.As(err, &decodeError) || decodeError.Path != "/nested" ||
+			decodeError.Code != "syntax" || decodeError.Message != "unterminated JSON value" ||
+			!errors.As(err, &syntaxError) {
+			t.Fatalf("unexpected mismatched delimiter error for %q: %T %#v", payload, err, decodeError)
+		}
+	}
+}
+
 func TestLinkMarshalHandlesEmptyScalarHreflang(t *testing.T) {
 	t.Parallel()
 
