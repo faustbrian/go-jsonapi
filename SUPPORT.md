@@ -12,4 +12,4 @@ for adoption questions and design exploration. Use the private process in
 
 The currently published stable release is `v1.0.0`. Support covers published
 module versions according to [`COMPATIBILITY.md`](COMPATIBILITY.md).
-Unreleased main-branch behavior is not a supported release and may change.
+Unreleased `/v2` main-branch behavior is not a supported release and may change.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -107,6 +108,31 @@ func TestDuplicateScannerRejectsMismatchedCompositeClosingDelimiter(t *testing.T
 			decodeError.Code != "syntax" || decodeError.Message != "unterminated JSON value" ||
 			!errors.As(err, &syntaxError) {
 			t.Fatalf("unexpected mismatched delimiter error for %q: %T %#v", payload, err, decodeError)
+		}
+	}
+}
+
+func TestDuplicateScannerRequiresMatchingClosingTokenHosted(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("scanner boundary characterization runs only in hosted CI")
+	}
+
+	for _, payload := range []string{`[[]}`, `{"member":[]]`} {
+		decoder := json.NewDecoder(bytes.NewBufferString(payload))
+		err := scanJSONValue(decoder, "/value")
+		var failure *DecodeError
+		if !errors.As(err, &failure) || failure.Path != "/value" ||
+			failure.Code != "syntax" || failure.Message != "unterminated JSON value" {
+			if failure != nil {
+				t.Fatalf("mismatched closing token refusal: path=%q code=%q message=%q", failure.Path, failure.Code, failure.Message)
+			}
+			t.Fatalf("mismatched closing token did not produce a typed syntax refusal: %T", err)
+		}
+	}
+	for _, payload := range []string{`[[]]`, `{"member":[]}`} {
+		decoder := json.NewDecoder(bytes.NewBufferString(payload))
+		if err := scanJSONValue(decoder, "/value"); err != nil {
+			t.Fatalf("complete composite was refused: %T", err)
 		}
 	}
 }

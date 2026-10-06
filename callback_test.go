@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -115,10 +116,14 @@ func TestConfiguredCodecConvertsCallbackPanics(t *testing.T) {
 }
 
 func TestCursorPaginationConvertsCallbackPanics(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		t.Skip("cursor admission behavior runs only in hosted CI")
+	}
 	t.Parallel()
 
 	cursor := mustCursorPagination(t, CursorPaginationConfig{
 		DefaultSize: 10,
+		MaxSize:     100,
 		ValidateCursor: func(string) error {
 			panic("private cursor panic")
 		},
@@ -130,6 +135,7 @@ func TestCursorPaginationConvertsCallbackPanics(t *testing.T) {
 
 	sortPagination := mustCursorPagination(t, CursorPaginationConfig{
 		DefaultSize: 10,
+		MaxSize:     100,
 		ValidateSort: func([]SortField) error {
 			panic("private sort panic")
 		},

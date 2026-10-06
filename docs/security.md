@@ -13,6 +13,11 @@ bounded decoding before allocating application-owned structures.
 - Register only trusted extension and profile callbacks.
 - Do not expose callback error text directly to clients.
 - Enforce HTTP request-body and header limits outside this package as well.
+- Set a positive `CursorPaginationConfig.MaxSize`; zero no longer permits
+  unbounded page work. Direct `Parse` and `ParseQuery` calls enforce
+  `DefaultQueryLimits` on page and sort inputs, including combined decoded
+  bytes and encoded sort bytes, before callbacks. Larger limits configured on
+  an upstream query parser do not raise this direct-entry admission policy.
 
 The package does not provide authentication, authorization, rate limiting,
 transport timeouts, or persistence controls. Those remain application
