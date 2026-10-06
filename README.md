@@ -16,9 +16,8 @@ profile, and the published JSON:API recommendations.
 
 ## Status
 
-This source prepares the unpublished v2 API with finite direct cursor admission
-and endpoint page limits. The latest published stable release remains
-`v1.0.0`; v2 is not yet an installable supported release. Read the
+The latest published stable release is `v2.0.0`, with finite direct cursor
+admission and endpoint page limits. Read the
 [migration notes](docs/migration.md) and
 [compatibility policy](docs/compatibility.md) before adopting v2.
 
@@ -29,12 +28,11 @@ and endpoint page limits. The latest published stable release remains
 ## Installation
 
 ```sh
-go get github.com/faustbrian/go-jsonapi@v1.0.0
+go get github.com/faustbrian/go-jsonapi/v2@v2.0.0
 ```
 
-After v2 is published, use `go get github.com/faustbrian/go-jsonapi/v2@v2.0.0`
-and import `github.com/faustbrian/go-jsonapi/v2`. Examples below describe the
-unpublished v2 source.
+Import `github.com/faustbrian/go-jsonapi/v2`. Examples below describe the
+published v2 API.
 
 ## Quickstart
 

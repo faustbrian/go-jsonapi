@@ -1,6 +1,6 @@
 github.com/DataDog/jsonapi v0.13.0 h1:ebIqG50aEGjjl/Hg8TVUsm6Fiw9T6IT1WZRC8aL8OQE=
 github.com/DataDog/jsonapi v0.13.0/go.mod h1:FUSGF3bwMARlVfXEoFo9R/CVlYYy9BGL4C/Prf6Ke3M=
-github.com/faustbrian/go-jsonapi/v2 v2.0.0-20261004234631-0ab07ff013e1 h1:wn5rxRH/f1R2FnH4iF4iMSZAAgKZutxL46ucu25hnck=
-github.com/faustbrian/go-jsonapi/v2 v2.0.0-20261004234631-0ab07ff013e1/go.mod h1:fffFyMPd21p89y2tp4igOgB9vFt48JImjVcaDnqqEE0=
+github.com/faustbrian/go-jsonapi/v2 v2.0.0 h1:4CFe9HA28DxRSN+H3eAMjgfe637WXzvCNUyAn3+WJQ0=
+github.com/faustbrian/go-jsonapi/v2 v2.0.0/go.mod h1:MV6Dr+s3ii1yQK/FIZ9Z861Z+7ToQhiuxvZssu1nSEY=
 golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=
 golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=

@@ -2,8 +2,8 @@
 
 ## From v1 to v2
 
-The v2 source is unpublished. The latest published stable release remains
-`v1.0.0`. Once v2 is published, change imports to
+The latest published stable release is `v2.0.0`. To upgrade from v1, change
+imports to
 `github.com/faustbrian/go-jsonapi/v2` and require `v2.0.0` or a later v2 release.
 Production code stays at the repository root on `main`.
 

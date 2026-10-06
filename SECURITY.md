@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest published stable v1 release. The
-currently supported release is `v1.0.0`. Unreleased `main` is not a supported
-release. The `/v2` source on `main` is unpublished. Additional supported release
-lines and end-of-support dates will be documented here when offered.
+Security fixes are applied to the latest published stable release. The
+currently supported release is `v2.0.0`, using the `/v2` module path. Unreleased
+`main` is not a supported release. Additional supported release lines and
+end-of-support dates will be documented here when offered.
 
 ## Reporting A Vulnerability
 
