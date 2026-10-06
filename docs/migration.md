@@ -1,5 +1,24 @@
 # Migration notes
 
+## From v1 to v2
+
+The v2 source is unpublished. The latest published stable release remains
+`v1.0.0`. Once v2 is published, change imports to
+`github.com/faustbrian/go-jsonapi/v2` and require `v2.0.0` or a later v2 release.
+Production code stays at the repository root on `main`.
+
+Set `CursorPaginationConfig.MaxSize` to a positive endpoint maximum and keep
+`DefaultSize` at or below it. Zero no longer permits unbounded ordinary
+pagination. Direct `Parse` and `ParseQuery` inputs obey `DefaultQueryLimits`
+before sorting or any callback, including combined page/sort byte admission.
+Larger upstream parser limits do not raise these direct cursor limits.
+Admission errors are `*CursorPaginationError` with HTTP status 400 and code
+`limit`, fixed redacted text, no cause and no partial request. Applications
+must handle these refusals without depending on callback invocation.
+
+The v1 exported API snapshot remains available in the immutable v1 Git
+history; the current snapshot describes v2, not a v1 compatibility assertion.
+
 ## From direct `encoding/json`
 
 1. replace ad hoc response maps with `Document` and `ResourceObject`;

@@ -2,6 +2,9 @@
 
 ## Scope and trust boundaries
 
+This model covers the unpublished `github.com/faustbrian/go-jsonapi/v2`
+source, not a qualification claim for the latest published `v1.0.0` release.
+
 The package accepts attacker-controlled JSON bytes, decoded URL query values,
 and media type header strings. It also calls application-controlled extension
 validators, profile validators, cursor/sort callbacks, and Atomic transaction
@@ -28,6 +31,7 @@ trust boundaries and are not implied by protocol conformance.
 | --- | --- | --- | --- |
 | Oversized or deeply nested JSON | Core, configured, and Atomic unmarshal | byte, depth, member, item, and total-value limits; duplicate and UTF-8 preflight | limit transport body size before allocation |
 | Huge decoded query families | `QueryParser.Parse` | name, value, total-byte, selector, list, parameter, and value counts | limit encoded request-target size |
+| Directly constructed cursor inputs | `CursorPagination.Parse`, `ParseQuery` | default query count/byte admission before sorting or callbacks; finite positive endpoint page maximum; fixed redacted admission errors | keep callback work bounded and select an endpoint maximum |
 | Header and candidate explosion | `Negotiator` | header, candidate, URI count/length, and configured URI limits | configure server header limits |
 | Ambiguous, duplicate, or non-compliant input | JSON codecs | duplicate-member rejection, non-compliant-member discard, strict recognized-member validation, presence-aware models | map typed failures without leaking request bodies |
 | Numeric precision loss | attributes, meta, extension values | `json.Number` preservation | convert numbers with domain-specific range checks |

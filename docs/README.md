@@ -1,13 +1,17 @@
 # Documentation
 
 Use this index to evaluate specification coverage before production adoption.
-The root module is a stable v1 library and requires Go 1.27.0 or later.
+This documentation describes unpublished v2 source requiring Go 1.27.0 or
+later. The latest published stable release remains `v1.0.0`.
 
-Install it with:
+Install the supported v1 release with:
 
 ```sh
-go get github.com/faustbrian/go-jsonapi
+go get github.com/faustbrian/go-jsonapi@v1.0.0
 ```
+
+After v2 is published, use `go get github.com/faustbrian/go-jsonapi/v2@v2.0.0`
+and the `/v2` import path; see [migration notes](migration.md).
 
 ## Getting started
 

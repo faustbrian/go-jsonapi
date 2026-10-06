@@ -127,20 +127,16 @@ type CursorPagination struct {
 }
 
 // NewCursorPagination validates endpoint policy before it serves requests.
-// A MaxSize of zero means unbounded ordinary pagination; range pagination
-// requires a finite maximum because that maximum becomes its default size.
+// MaxSize must be positive and finite for both ordinary and range pagination.
 func NewCursorPagination(config CursorPaginationConfig) (*CursorPagination, error) {
 	if config.DefaultSize < 1 {
 		return nil, fmt.Errorf("cursor pagination default size must be positive")
 	}
-	if config.MaxSize < 0 {
-		return nil, fmt.Errorf("cursor pagination max size must not be negative")
+	if config.MaxSize <= 0 {
+		return nil, fmt.Errorf("cursor pagination max size must be positive")
 	}
-	if config.MaxSize > 0 && config.DefaultSize > config.MaxSize {
+	if config.DefaultSize > config.MaxSize {
 		return nil, fmt.Errorf("cursor pagination default size must not exceed max size")
-	}
-	if config.AllowRange && config.MaxSize == 0 {
-		return nil, fmt.Errorf("cursor range pagination requires a finite max size")
 	}
 	pageMember, err := cursorPageMember(config.PageMember)
 	if err != nil {
@@ -161,6 +157,9 @@ func NewCursorPagination(config CursorPaginationConfig) (*CursorPagination, erro
 // requirement. When ValidateSort is nil, the caller remains responsible for
 // applying a unique order before fetching the page.
 func (pagination *CursorPagination) ParseQuery(query Query) (CursorPageRequest, error) {
+	if err := pagination.admit(query.Page, query.Sort); err != nil {
+		return CursorPageRequest{}, err
+	}
 	request, err := pagination.Parse(query.Page)
 	if err != nil {
 		return CursorPageRequest{}, err
@@ -179,8 +178,13 @@ func (pagination *CursorPagination) ParseQuery(query Query) (CursorPageRequest, 
 }
 
 // Parse validates the page parameter family according to the profile and
-// endpoint configuration.
+// endpoint configuration. Direct inputs use DefaultQueryLimits before any
+// sorting or application callback. ParseQuery applies those limits to the
+// combined page and sort input before validating either part.
 func (pagination *CursorPagination) Parse(family ParameterFamily) (CursorPageRequest, error) {
+	if err := pagination.admit(family, nil); err != nil {
+		return CursorPageRequest{}, err
+	}
 	names := make([]string, 0, len(family))
 	for name := range family {
 		names = append(names, name)
@@ -210,7 +214,7 @@ func (pagination *CursorPagination) Parse(family ParameterFamily) (CursorPageReq
 				"page[size]", "invalid-parameter", "page size must be a positive integer", 0,
 			)
 		}
-		if pagination.maxSize > 0 && size > pagination.maxSize {
+		if size > pagination.maxSize {
 			return CursorPageRequest{}, pagination.failure(
 				"page[size]",
 				"max-size-exceeded",
@@ -270,6 +274,60 @@ func (pagination *CursorPagination) Parse(family ParameterFamily) (CursorPageReq
 	}
 
 	return request, nil
+}
+
+// admit bounds directly constructed inputs as well as QueryParser output.
+// Remaining budgets avoid overflow and cap work before sorting or callbacks.
+func (pagination *CursorPagination) admit(family ParameterFamily, fields []SortField) error {
+	limits := DefaultQueryLimits()
+	refuse := func() error {
+		return pagination.failure("", "limit", "cursor pagination input exceeds resource limits", 0)
+	}
+	if len(family) > limits.MaxParameters || len(fields) > limits.MaxListItems {
+		return refuse()
+	}
+	bytesRemaining, valuesRemaining := limits.MaxTotalBytes, limits.MaxValues
+	for name, values := range family {
+		if len(name) > limits.MaxNameBytes || len(name) > bytesRemaining || len(values) > valuesRemaining {
+			return refuse()
+		}
+		bytesRemaining -= len(name)
+		valuesRemaining -= len(values)
+		for _, value := range values {
+			if len(value) > limits.MaxValueBytes || len(value) > bytesRemaining {
+				return refuse()
+			}
+			bytesRemaining -= len(value)
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	if len(family) == limits.MaxParameters || valuesRemaining == 0 || bytesRemaining < len("sort") {
+		return refuse()
+	}
+	bytesRemaining -= len("sort")
+	sortRemaining := limits.MaxValueBytes
+	for index, field := range fields {
+		prefix := 0
+		if index > 0 {
+			prefix++
+		}
+		if field.Descending {
+			prefix++
+		}
+		if prefix > sortRemaining || prefix > bytesRemaining {
+			return refuse()
+		}
+		sortRemaining -= prefix
+		bytesRemaining -= prefix
+		if len(field.Name) > sortRemaining || len(field.Name) > bytesRemaining {
+			return refuse()
+		}
+		sortRemaining -= len(field.Name)
+		bytesRemaining -= len(field.Name)
+	}
+	return nil
 }
 
 func positiveDecimal(value string) (int, error) {

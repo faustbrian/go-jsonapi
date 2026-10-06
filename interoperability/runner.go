@@ -11,13 +11,14 @@ import (
 	"runtime/debug"
 
 	peer "github.com/DataDog/jsonapi"
-	local "github.com/faustbrian/go-jsonapi"
+	local "github.com/faustbrian/go-jsonapi/v2"
 )
 
 const (
-	localName  = "faustbrian/go-jsonapi"
-	peerName   = "DataDog/jsonapi"
-	peerModule = "github.com/DataDog/jsonapi"
+	localName   = "faustbrian/go-jsonapi"
+	localModule = "github.com/faustbrian/go-jsonapi/v2"
+	peerName    = "DataDog/jsonapi"
+	peerModule  = "github.com/DataDog/jsonapi"
 )
 
 type article struct {
@@ -54,6 +55,10 @@ func main() {
 }
 
 func observe() ([]observation, error) {
+	localVersion, err := moduleVersion(localModule)
+	if err != nil {
+		return nil, err
+	}
 	peerVersion, err := moduleVersion(peerModule)
 	if err != nil {
 		return nil, err
@@ -65,7 +70,7 @@ func observe() ([]observation, error) {
 			classification = "maintained peer agreement"
 		}
 		observations = append(observations,
-			observation{decisionID, caseName, localName, "workspace", localOutcome, classification},
+			observation{decisionID, caseName, localName, localVersion, localOutcome, classification},
 			observation{decisionID, caseName, peerName, peerVersion, peerOutcome, classification},
 		)
 	}
@@ -140,6 +145,18 @@ func moduleVersion(path string) (string, error) {
 	}
 	for _, dependency := range info.Deps {
 		if dependency.Path == path {
+			if dependency.Replace != nil {
+				if dependency.Replace.Version == "" || dependency.Replace.Version == "(devel)" {
+					return "workspace", nil
+				}
+				return dependency.Replace.Path + "@" + dependency.Replace.Version, nil
+			}
+			if dependency.Version == "(devel)" {
+				return "workspace", nil
+			}
+			if dependency.Version == "" {
+				return "", fmt.Errorf("missing differential module version for %s", path)
+			}
 			return dependency.Version, nil
 		}
 	}

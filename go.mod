@@ -1,4 +1,4 @@
-module github.com/faustbrian/go-jsonapi
+module github.com/faustbrian/go-jsonapi/v2
 
 go 1.27.0
 
