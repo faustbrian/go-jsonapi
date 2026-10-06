@@ -2,8 +2,8 @@
 
 ## Scope and trust boundaries
 
-This model covers the unpublished `github.com/faustbrian/go-jsonapi/v2`
-source, not a qualification claim for the latest published `v1.0.0` release.
+This model covers `github.com/faustbrian/go-jsonapi/v2`, published as v2.0.0.
+Its scope does not extend to the earlier v1.0.0 release.
 
 The package accepts attacker-controlled JSON bytes, decoded URL query values,
 and media type header strings. It also calls application-controlled extension
