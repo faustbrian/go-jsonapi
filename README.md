@@ -3,7 +3,7 @@
 [![CI](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-jsonapi/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
-[![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-local_and_scheduled-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-jsonapi/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-jsonapi/v2)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-jsonapi?sort=semver)](https://github.com/faustbrian/go-jsonapi/releases)
@@ -94,9 +94,11 @@ and its [Protocols and descriptions family](https://github.com/faustbrian/go-lib
 
 ## Development
 
-Run `make check` before submitting a change. This enforces formatting, static
-analysis, race tests, meaningful 100% coverage, fuzz smoke, benchmarks,
-documentation, and vulnerability scanning.
+Start isolated root changes with `GOWORK=off go test ./...`. With the public
+verifier pinned in `.golib.yaml`, `make check` and `make ci` select bounded local
+verification; `make check-full` retains explicit full assurance. See
+[contributor verification](CONTRIBUTING.md#verification) for focused 2s fuzzing,
+optional mutation and relevant protocol, ownership and release checks.
 
 Run `make interoperability` to reproduce the pinned maintained-peer decision
 matrix without adding competitor dependencies to the public module.

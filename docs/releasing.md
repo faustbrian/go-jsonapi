@@ -15,6 +15,13 @@ Releases are tag-driven and reproducible from a clean `main` commit.
 
 ## Required verification
 
+Ordinary `make check` and `make ci` select bounded local verification, not release
+qualification. `make check-full` preserves all configured full operations;
+`golib release dry-run --module .` and the existing selected full root release
+job retain the explicit release boundary. See
+[contributor verification](../CONTRIBUTING.md#verification) for isolated
+development, maintained-peer integration and focused active fuzzing.
+
 ```sh
 test -z "$(gofmt -l .)"
 go mod tidy -diff

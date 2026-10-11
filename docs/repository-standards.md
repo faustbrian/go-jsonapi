@@ -30,14 +30,17 @@ concepts.
 
 ## Mandatory Automation
 
-Every repository provides pinned-SHA workflows for CI, benchmarks, scheduled
-fuzzing, security, and tagged releases. Stable-v1 repositories declare and
-test Go 1.27.0 as their exact supported minimum. Dependency review runs on pull
-requests; reachable dependency scanning uses `govulncheck`.
+This repository owns one pinned-SHA CI workflow, including its existing manual
+diagnostic and full root release selectors. Ordinary CI consumes the qualified
+public verifier and retains applicable dependency/security checks and fail-closed
+Required aggregation. Ordinary verification uses Go 1.27.2; public and interoperability
+module minima remain Go 1.27.0.
 
-The common Make interface is `format`, `format-check`, `test`,
-`test-race`, `coverage`, `vet`, `lint`, `fuzz`, `benchmark`,
-`safety`, `docs`, `vuln`, `check`, and semantic release targets.
+The actual Make interface is `inventory`, `repository-check`, `cohesion`,
+`interoperability`, bounded local `check`/`ci`, and explicit full `check-full`.
+Standalone root tests do not require the optional interoperability workspace.
+See [contributor verification](../CONTRIBUTING.md#verification) for focused
+fuzzing, optional mutation and relevant protocol/integration/release boundaries.
 
 The package family shares the `GO-SAFETY-1` baseline. It forbids `unsafe`,
 cgo, and `go:linkname` in production code and standardizes ownership,
@@ -57,5 +60,5 @@ goroutine lifecycle, race, fuzz, resource-bound, leak, and benchmark evidence.
 
 Code, dependencies, fuzz targets, benchmark inputs, and domain-specific
 security guidance are expected to differ. Shared policy wording and automation
-structure must not drift without updating this contract across all affected
-repositories.
+structure follows the applicable owned contract; an ordinary package change does
+not require edits or releases in sibling repositories.
