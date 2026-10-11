@@ -30,7 +30,7 @@ Mutation is optional local or scheduled assurance, not a required PR status.
 Confirmed behavioral or security defects still require a focused regression
 and repair; retain reviewed narrow equivalent/invalid-mutant dispositions.
 
-Do not add package-local workflows, permanent replacements, machine-specific
+Do not fork shared verification workflows, add permanent replacements, machine-specific
 paths, bypass flags, broad mutation exclusions, or aggregate quality metrics
 that hide a failing package.
 
@@ -77,6 +77,29 @@ root release job; see [releasing](docs/releasing.md). Select full/release checks
 for a named risk or release boundary, not every commit. Report unavailable,
 skipped and failed boundaries honestly; local checks are not hosted-CI or
 public-release qualification.
+
+## Selected Monthly Assurance
+
+The owner-level [selected-assurance caller](.github/workflows/assurance.yml) is
+configured for main only, on day 11 of each month at 05:41 UTC. It selects one
+of the 9 current declared root-module fuzz targets using the shared UTC-week
+rotation, with 30 seconds of active exploration. The selected risks are:
+canonical and Atomic document round trips, query determinism, cursor bounds,
+media negotiation, registered members and cursor metadata.
+The root targets are in-process codec and protocol checks. The owned nested
+interoperability module and historical manual diagnostics retain their separate
+full contracts; this lane does not qualify maintained peers or Atomic execution.
+
+Base-free ordinary checks execute deterministic seeds, not active exploration;
+committed-range CI selects affected active smoke. Manual assurance requires an
+exact anchored selector from the root fuzz operation in `.golib.yaml`, for
+example `^FuzzUnmarshal$`.
+Empty, unknown and malformed selections refuse. The shared job bounds setup
+and execution to ten minutes, active workers and CPU to two, owned memory to
+2 GiB, native output to 1 MiB and private-cache lifetime. Failure, cancellation,
+exhausted budgets and cleanup refusal remain attributable failures. This lane
+does not run mutation or replace Required, original full fuzz budgets,
+explicit `make check-full`, or relevant release qualification.
 
 ## Adding A Module
 
