@@ -116,13 +116,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: faustbrian/go-library-tools
-          ref: 71862edbff6d1cb69e250164ffac0a344eba8e81
+          ref: d38bf31e7403501075442de9fde78f9479052996
           path: coverage-tooling
           persist-credentials: false
           fetch-depth: 4
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27.0'
+          go-version: '1.27.2'
           cache: false
       - name: Build diagnostic tooling
         working-directory: coverage-tooling
@@ -249,7 +249,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: faustbrian/go-library-tools
-          ref: dbce31aab4f15b3440e0559d3e2bad8912b6e567
+          ref: d38bf31e7403501075442de9fde78f9479052996
           path: release-tooling
           persist-credentials: false
           fetch-depth: 1
@@ -264,7 +264,7 @@ jobs:
         working-directory: release-tooling
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = dbce31aab4f15b3440e0559d3e2bad8912b6e567
+          test "$(git rev-parse HEAD)" = d38bf31e7403501075442de9fde78f9479052996
           go build -p 1 -trimpath -buildvcs=false -o "${GOTMPDIR}/golib" ./cmd/golib
           test "$("${GOTMPDIR}/golib" --version)" = dev
       - name: Validate producer authorities and complete root release contract
