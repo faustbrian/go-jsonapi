@@ -23,37 +23,69 @@ const (
 // CursorPaginationConfig defines endpoint-specific page sizing, range
 // support, and opaque cursor validation.
 type CursorPaginationConfig struct {
-	DefaultSize    int
-	MaxSize        int
-	AllowRange     bool
-	PageMember     string
+	// DefaultSize is required and positive, and must not exceed MaxSize.
+	DefaultSize int
+	// MaxSize is a required positive endpoint ceiling; there is no unbounded zero
+	// policy.
+	MaxSize int
+	// AllowRange permits requests with both page[after] and page[before].
+	AllowRange bool
+	// PageMember aliases the profile metadata element; empty selects page, not a
+	// different query family.
+	PageMember string
+	// ValidateCursor optionally checks an opaque cursor synchronously;
+	// authenticity and backend meaning remain caller-owned.
 	ValidateCursor func(string) error
-	ValidateSort   func([]SortField) error
+	// ValidateSort optionally checks the borrowed sort slice; it must not mutate
+	// it or perform unbounded work.
+	ValidateSort func([]SortField) error
 }
 
 // CursorPageRequest is the validated cursor pagination request for an
-// endpoint.
+// endpoint. It is evidence for backend policy, not a fetched page or an
+// authenticated cursor. Presence bits distinguish absence from explicit values.
 type CursorPageRequest struct {
-	Size          int
-	SizePresent   bool
-	After         string
-	AfterPresent  bool
-	Before        string
+	// Size is the admitted effective page size, including the configured default.
+	Size int
+	// SizePresent records whether page[size] was explicitly supplied.
+	SizePresent bool
+	// After is an opaque requested cursor, not a decoded backend offset.
+	After string
+	// AfterPresent preserves explicit page[after] presence independently of its
+	// value.
+	AfterPresent bool
+	// Before is an opaque requested cursor, not an independently validated
+	// position.
+	Before string
+	// BeforePresent preserves explicit page[before] presence independently of its
+	// value.
 	BeforePresent bool
-	Range         bool
-	PageMember    string
+	// Range reports a request with both boundary cursors.
+	Range bool
+	// PageMember is the admitted metadata alias used for this request.
+	PageMember string
 }
 
 // CursorPaginationError describes a profile query failure and its required
 // HTTP status.
 type CursorPaginationError struct {
-	Status     int
-	Parameter  string
-	Code       string
-	Message    string
-	MaxSize    int
+	// Status is the profile query failure HTTP status.
+	Status int
+	// Parameter names the refused decoded query parameter.
+	Parameter string
+	// Code selects the profile error category and optional type link.
+	Code string
+	// Message is the diagnostic included by Error, excluding wrapped validator
+	// text.
+	Message string
+	// MaxSize is the endpoint ceiling used for max-size-exceeded metadata.
+	MaxSize int
+	// PageMember selects the metadata alias; invalid aliases fall back to page in
+	// ErrorObject.
 	PageMember string
-	Cause      error
+	// Cause retains application callback diagnostics without including their text
+	// in Error.
+	Cause error
 }
 
 // Error implements error.
@@ -116,7 +148,10 @@ func ValidateCursorPaginationLinks(links Links) error {
 	return &ValidationError{Violations: validator.violations}
 }
 
-// CursorPagination parses the page family for one configured endpoint.
+// CursorPagination parses the page family for one configured endpoint. Use
+// NewCursorPagination; immutable policy can be shared when callbacks are safe
+// for concurrent calls. Callbacks execute synchronously without deadlines and
+// ordinary panics are wrapped, not blocking or goroutine termination.
 type CursorPagination struct {
 	defaultSize    int
 	maxSize        int
@@ -155,7 +190,9 @@ func NewCursorPagination(config CursorPaginationConfig) (*CursorPagination, erro
 
 // ParseQuery validates both the page family and the endpoint's stable sorting
 // requirement. When ValidateSort is nil, the caller remains responsible for
-// applying a unique order before fetching the page.
+// applying a unique order before fetching the page. Requested sort fields are
+// borrowed by the validator, not copied or applied to storage. All failures
+// return a zero request; this call performs no cursor decoding or data fetch.
 func (pagination *CursorPagination) ParseQuery(query Query) (CursorPageRequest, error) {
 	if err := pagination.admit(query.Page, query.Sort); err != nil {
 		return CursorPageRequest{}, err
@@ -276,8 +313,9 @@ func (pagination *CursorPagination) Parse(family ParameterFamily) (CursorPageReq
 	return request, nil
 }
 
-// admit bounds directly constructed inputs as well as QueryParser output.
-// Remaining budgets avoid overflow and cap work before sorting or callbacks.
+// admit bounds direct inputs and QueryParser output before sorting or callbacks.
+// Remaining budgets avoid overflow; sort bytes are charged in their equivalent
+// encoded form without constructing the joined value.
 func (pagination *CursorPagination) admit(family ParameterFamily, fields []SortField) error {
 	limits := DefaultQueryLimits()
 	refuse := func() error {

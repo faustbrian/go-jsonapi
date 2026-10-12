@@ -7,6 +7,14 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Clarify source contracts for wire presence and shallow ownership, decoder
+  versus callback limits, explicit registry activation, query/backend policy,
+  negotiation, cursor evidence and Atomic cleanup/durability boundaries.
+  Document the existing null-to-empty string decoding limitation without
+  endorsing it as a protocol rule or changing executable behavior.
+
 ## [1.1.0] - 2026-10-05
 
 The [specification decision register](docs/specification-decisions.md) records

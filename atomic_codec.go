@@ -24,13 +24,13 @@ func MarshalAtomicWith(
 	return json.Marshal(document)
 }
 
-// UnmarshalAtomic strictly decodes and validates an Atomic Operations
+// UnmarshalAtomic decodes and validates an Atomic Operations
 // document.
 func UnmarshalAtomic(payload []byte) (AtomicDocument, error) {
 	return UnmarshalAtomicWith(payload, AtomicValidationOptions{})
 }
 
-// UnmarshalAtomicWith strictly decodes and validates a document in the
+// UnmarshalAtomicWith decodes and validates a document in the
 // supplied Atomic protocol context.
 func UnmarshalAtomicWith(
 	payload []byte,
@@ -39,8 +39,13 @@ func UnmarshalAtomicWith(
 	return UnmarshalAtomicWithLimits(payload, options, DecodeLimits{})
 }
 
-// UnmarshalAtomicWithLimits strictly decodes and validates an Atomic document
-// with explicit resource limits. Zero limit fields use production defaults.
+// UnmarshalAtomicWithLimits decodes and validates an Atomic document
+// with explicit resource limits. Zero fields select defaults; negative fields
+// are rejected. Error returns a zero AtomicDocument, never partial operations.
+// It shares core UTF-8, byte, duplicate-member and structural scan policy,
+// then rejects core data/included members and validates Atomic shapes. No
+// operation is executed and no database transaction is acquired. Shared string
+// decoding retains the null-normalization limitation in UnmarshalWithLimits.
 func UnmarshalAtomicWithLimits(
 	payload []byte,
 	options AtomicValidationOptions,

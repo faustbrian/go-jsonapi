@@ -28,3 +28,12 @@ responsibilities.
 Follow the repository [security policy](../SECURITY.md) for private
 vulnerability reporting. See the [threat model](threat-model.md) and
 [conformance contract](conformance.md) for the maintained security assumptions.
+
+## Original wire types
+
+Current string-member decoding inherits `encoding/json` null-to-empty-string
+normalization. A resource `id: null` can therefore be accepted and re-encoded
+as `id: ""`. This is a known decoder limitation, not JSON:API permission for
+null identifiers. Successful decoding is not proof that every original scalar
+wire type was valid; do not infer that stronger guarantee from checked encoding
+or decoded Go string fields.

@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// BenchmarkMarshalSingleResource includes checked encoding for one resource;
+// fixture construction is outside b.Loop, not part of the measured operation.
 func BenchmarkMarshalSingleResource(b *testing.B) {
 	collection := benchmarkDocument(1, false)
 	document := Document{Data: ResourceData(collection.Data.many[0])}
@@ -17,6 +19,8 @@ func BenchmarkMarshalSingleResource(b *testing.B) {
 	}
 }
 
+// BenchmarkMarshalResourceCollection measures checked encoding of a prepared
+// 100-resource collection, without document construction or application I/O.
 func BenchmarkMarshalResourceCollection(b *testing.B) {
 	document := benchmarkDocument(100, false)
 	b.ReportAllocs()
@@ -27,6 +31,8 @@ func BenchmarkMarshalResourceCollection(b *testing.B) {
 	}
 }
 
+// BenchmarkUnmarshalSingleResource measures full checked decoding from bytes;
+// preparing its one-resource payload is outside the measured loop.
 func BenchmarkUnmarshalSingleResource(b *testing.B) {
 	document := Document{Data: ResourceData(benchmarkDocument(1, false).Data.many[0])}
 	payload, err := Marshal(document)
@@ -42,6 +48,8 @@ func BenchmarkUnmarshalSingleResource(b *testing.B) {
 	}
 }
 
+// BenchmarkUnmarshalResourceCollection measures admission and decoding of a
+// prepared 100-resource payload; bytes/allocation figures exclude preparation.
 func BenchmarkUnmarshalResourceCollection(b *testing.B) {
 	payload, err := Marshal(benchmarkDocument(100, false))
 	if err != nil {
@@ -56,6 +64,8 @@ func BenchmarkUnmarshalResourceCollection(b *testing.B) {
 	}
 }
 
+// BenchmarkMarshalCompoundDocument measures encoding and linkage validation
+// for 100 primary resources and their included authors, with prepared input.
 func BenchmarkMarshalCompoundDocument(b *testing.B) {
 	document := benchmarkDocument(100, true)
 	b.ReportAllocs()
@@ -66,6 +76,8 @@ func BenchmarkMarshalCompoundDocument(b *testing.B) {
 	}
 }
 
+// BenchmarkUnmarshalCompoundDocument measures full decoding and linkage checks
+// for the prepared compound fixture, excluding its initial encoding.
 func BenchmarkUnmarshalCompoundDocument(b *testing.B) {
 	payload, err := Marshal(benchmarkDocument(100, true))
 	if err != nil {
@@ -80,6 +92,8 @@ func BenchmarkUnmarshalCompoundDocument(b *testing.B) {
 	}
 }
 
+// BenchmarkUnmarshalAdversarialCompoundDocument stresses cyclic included
+// linkage and ID/LID aliases across 1,000 authors; fixture setup is excluded.
 func BenchmarkUnmarshalAdversarialCompoundDocument(b *testing.B) {
 	payload, err := Marshal(benchmarkAdversarialCompoundDocument(1_000))
 	if err != nil {
@@ -94,6 +108,8 @@ func BenchmarkUnmarshalAdversarialCompoundDocument(b *testing.B) {
 	}
 }
 
+// BenchmarkMarshalAtomicOperations measures checked encoding of 100 prepared
+// remove operations; application transaction execution is excluded.
 func BenchmarkMarshalAtomicOperations(b *testing.B) {
 	document := benchmarkAtomicDocument(100)
 	b.ReportAllocs()
@@ -104,6 +120,8 @@ func BenchmarkMarshalAtomicOperations(b *testing.B) {
 	}
 }
 
+// BenchmarkUnmarshalAtomicOperations measures full checked decoding of 100
+// remove operations from prepared bytes, not executing them.
 func BenchmarkUnmarshalAtomicOperations(b *testing.B) {
 	payload, err := MarshalAtomic(benchmarkAtomicDocument(100))
 	if err != nil {
@@ -118,6 +136,8 @@ func BenchmarkUnmarshalAtomicOperations(b *testing.B) {
 	}
 }
 
+// BenchmarkParseQuery measures family parsing of a fixed decoded query; URL
+// decoding, HTTP admission and applying filters/ordering are excluded.
 func BenchmarkParseQuery(b *testing.B) {
 	values := url.Values{
 		"include":          {"author.comments,tags"},
@@ -135,6 +155,8 @@ func BenchmarkParseQuery(b *testing.B) {
 	}
 }
 
+// BenchmarkNegotiateAccept measures selection for one fixed header/capability
+// set; registry construction and actually applying profiles are excluded.
 func BenchmarkNegotiateAccept(b *testing.B) {
 	const extension = "https://example.com/extensions/version"
 	const profile = "https://example.com/profiles/timestamps"
@@ -152,6 +174,8 @@ func BenchmarkNegotiateAccept(b *testing.B) {
 	}
 }
 
+// BenchmarkCursorPaginationMetadata measures wrapping and parsing fixed count
+// metadata together; it does not query or estimate a real collection.
 func BenchmarkCursorPaginationMetadata(b *testing.B) {
 	total := int64(100_000)
 	estimate := int64(100_500)

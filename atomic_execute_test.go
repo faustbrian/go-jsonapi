@@ -417,6 +417,8 @@ func (begin atomicBeginnerFunc) BeginAtomic(ctx context.Context) (AtomicTransact
 	return begin(ctx)
 }
 
+// recordingAtomicTransaction exposes ordering/finalization and injected callback
+// failures; it is not evidence of storage atomicity or commit durability.
 type recordingAtomicTransaction struct {
 	hrefs                []string
 	failAt               int

@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// Members contains registered extension or profile members attached to a
-// JSON:API-defined object.
+// Members holds caller-owned additional values attached to a defined object.
+// Checked encoding accepts scope-registered extension members and @-Members,
+// not arbitrary new core fields. Profile semantics use their own validator seam.
 type Members map[string]any
 
 // MemberScope identifies the JSON:API object where a custom member is valid.
@@ -39,35 +40,56 @@ const (
 // MemberDefinition declares one extension member and its optional value
 // validator.
 type MemberDefinition struct {
-	Scope    MemberScope
-	Name     string
+	// Scope selects the one JSON:API object kind where Name is registered.
+	Scope MemberScope
+	// Name must use the extension namespace and a valid member suffix.
+	Name string
+	// Validate optionally checks a borrowed value synchronously; do not mutate it
+	// and bound its work.
 	Validate func(any) error
 }
 
 // ExtensionDefinition declares an applied JSON:API extension.
 type ExtensionDefinition struct {
-	URI       string
+	// URI is an absolute extension identifier; registering it does not fetch the
+	// URI.
+	URI string
+	// Namespace is the extension's non-empty ASCII alphanumeric namespace.
 	Namespace string
-	Members   []MemberDefinition
+	// Members defines scoped names and validators; NewCodec copies definitions,
+	// not callback state.
+	Members []MemberDefinition
 }
 
 // ProfileDefinition declares an applied JSON:API profile and its optional
 // document-level implementation-semantics validator.
 type ProfileDefinition struct {
-	URI              string
+	// URI is an absolute profile identifier; no network discovery is performed.
+	URI string
+	// ValidateDocument runs for each configured profile, borrowing the document;
+	// observed mutation is refused but not undone.
 	ValidateDocument func(Document) error
 }
 
 // CodecOptions configures applied extensions and core validation context.
 type CodecOptions struct {
+	// Extensions defines the copied immutable scoped registry used by the Codec.
 	Extensions []ExtensionDefinition
-	Profiles   []ProfileDefinition
+	// Profiles defines copied profile registrations; callback closures remain
+	// caller-owned.
+	Profiles []ProfileDefinition
+	// Validation selects core validation rules for every encoded or decoded
+	// document.
 	Validation ValidationOptions
-	Limits     DecodeLimits
+	// Limits bounds decoding only; zero fields select production defaults.
+	Limits DecodeLimits
 }
 
-// Codec is a strict document codec with explicitly registered extension
+// Codec is a checked document codec with explicitly registered extension
 // members.
+// Construct it with NewCodec. Registry state is read-only after construction;
+// concurrent calls still require concurrency-safe callbacks and stable inputs.
+// Documents are borrowed during encoding, not cloned before validation.
 type Codec struct {
 	validation ValidationOptions
 	members    map[MemberScope]map[string]MemberDefinition
@@ -76,7 +98,11 @@ type Codec struct {
 	limits     DecodeLimits
 }
 
-// NewCodec validates all extension definitions before constructing a codec.
+// NewCodec validates definitions and copies registry entries, URI lists and
+// profile values. Callback functions and their captured state remain borrowed;
+// registration itself neither executes callbacks nor discovers remote URIs.
+// Codec limits apply to decoding, not arbitrary configured registry sizes or
+// application code. Do not mutate document values from validators.
 func NewCodec(options CodecOptions) (*Codec, error) {
 	limits, err := normalizeDecodeLimits(options.Limits)
 	if err != nil {
@@ -152,7 +178,11 @@ func NewCodec(options CodecOptions) (*Codec, error) {
 	return codec, nil
 }
 
-// Marshal validates and deterministically encodes a registered document.
+// Marshal validates scoped members, core rules and declarations before profile
+// callbacks and encoding. Configured profiles run even if JSONAPI is nil. A
+// successful profile callback is checked for changed JSON representation, but
+// mutation is not rolled back and custom JSON side effects are not isolated.
+// Callback failures expose CallbackError; raw JSON methods retain native behavior.
 func (codec *Codec) Marshal(document Document) ([]byte, error) {
 	if err := validateDocumentMembers(document, codec.members); err != nil {
 		return nil, err
@@ -170,8 +200,12 @@ func (codec *Codec) Marshal(document Document) ([]byte, error) {
 	return json.Marshal(document)
 }
 
-// Unmarshal strictly decodes registered extension members and the core
-// document.
+// Unmarshal decodes registered extension members and the core
+// document. Error returns a zero Document. Structural admission precedes
+// registered extraction; unknown values cannot satisfy required core members.
+// Decoder results use owned containers, but validators borrow them synchronously
+// and must not mutate them or retain them for uncoordinated later use. It shares
+// the native string null-normalization limitation documented by UnmarshalWithLimits.
 func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err := validateJSONPayload(payload, codec.limits); err != nil {
 		return Document{}, err
@@ -301,6 +335,8 @@ func (codec *Codec) validateDeclarations(document Document) error {
 	return &ValidationError{Violations: validator.violations}
 }
 
+// This is a before/after wire comparison, not a cloned sandbox or mutation
+// rollback. A trusted callback still sees the caller's shared nested objects.
 func (codec *Codec) validateProfiles(document Document) error {
 	for _, profile := range codec.profiles {
 		if profile.ValidateDocument != nil {
@@ -663,6 +699,8 @@ func (codec *Codec) sanitizeIdentifier(
 	return sanitized, members, err
 }
 
+// Scope registration (JSONAPI-DEC-002) is the activation boundary; advertised
+// URIs and arbitrary unknown members cannot register executable semantics.
 func (codec *Codec) extractMembers(
 	object map[string]json.RawMessage,
 	scope MemberScope,

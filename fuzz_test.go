@@ -8,6 +8,9 @@ import (
 	"unicode/utf8"
 )
 
+// FuzzUnmarshal drives untrusted core bytes through bounded decoding and checks
+// that every accepted value can be encoded and decoded again; it is not an
+// independent JSON:API compliance oracle.
 func FuzzUnmarshal(f *testing.F) {
 	seeds := [][]byte{
 		[]byte(`{"data":null}`),
@@ -37,6 +40,8 @@ func FuzzUnmarshal(f *testing.F) {
 	})
 }
 
+// FuzzUnmarshalAtomic drives hostile Atomic bytes through bounded decoding and
+// accepted-value round trips; it does not execute any mutation or transaction.
 func FuzzUnmarshalAtomic(f *testing.F) {
 	seeds := [][]byte{
 		[]byte(`{"atomic:operations":[{"op":"remove","href":"/articles/1"}]}`),
@@ -65,6 +70,8 @@ func FuzzUnmarshalAtomic(f *testing.F) {
 	})
 }
 
+// FuzzParseQuery separates URL decoding from the JSON:API family parser and
+// checks repeatability for accepted decoded values, not backend semantics.
 func FuzzParseQuery(f *testing.F) {
 	seeds := []string{
 		"include=author.comments&fields%5Barticles%5D=title,body&sort=-createdAt",
@@ -95,6 +102,8 @@ func FuzzParseQuery(f *testing.F) {
 	})
 }
 
+// FuzzCursorPaginationQuery exercises decoded page input against a fixed
+// positive maximum; no cursor authentication or storage ordering is provided.
 func FuzzCursorPaginationQuery(f *testing.F) {
 	pagination, err := NewCursorPagination(CursorPaginationConfig{
 		DefaultSize: 20,
@@ -133,6 +142,8 @@ func FuzzCursorPaginationQuery(f *testing.F) {
 	})
 }
 
+// FuzzNegotiation checks canonical reacceptance for one fixed capability set,
+// keeping header parsing separate from actually applying extension semantics.
 func FuzzNegotiation(f *testing.F) {
 	const extension = "https://example.com/extensions/version"
 	const profile = "https://example.com/profiles/timestamps"
@@ -166,6 +177,8 @@ func FuzzNegotiation(f *testing.F) {
 	})
 }
 
+// FuzzConstructedDocumentValidation checks acceptance repeatability on small
+// string-valued constructed models; it is not a budget for arbitrary Go objects.
 func FuzzConstructedDocumentValidation(f *testing.F) {
 	f.Add("articles", "1", "title", "Hello")
 	f.Add("@type", "", "bad/name", "\x00")
@@ -184,6 +197,8 @@ func FuzzConstructedDocumentValidation(f *testing.F) {
 	})
 }
 
+// FuzzMemberRegistry exercises namespace/name admission and scoped member
+// round trips using JSON-derived values, not trusted callback execution.
 func FuzzMemberRegistry(f *testing.F) {
 	f.Add("version", "id", `"1"`)
 	f.Add("bad:name", "@value", `{}`)
@@ -223,6 +238,8 @@ func FuzzMemberRegistry(f *testing.F) {
 	})
 }
 
+// FuzzCursorMetadata checks alias, count, presence and cursor round trips with
+// primitive values; it does not establish authenticity or a backend total.
 func FuzzCursorMetadata(f *testing.F) {
 	f.Add("page", int64(0), int64(1), true, "opaque")
 	f.Add("customPage", int64(-1), int64(0), false, "")
@@ -251,6 +268,8 @@ func FuzzCursorMetadata(f *testing.F) {
 	})
 }
 
+// FuzzMarshalUnmarshalRoundTrip checks canonical bytes for accepted UTF-8
+// constructed data; custom JSON methods and application side effects are absent.
 func FuzzMarshalUnmarshalRoundTrip(f *testing.F) {
 	f.Add("articles", "1", "Hello", "opaque")
 	f.Add("invalid/type", "", "\x00", "")

@@ -9,13 +9,20 @@ import (
 
 // CursorPageMeta describes metadata adjacent to paginated data.
 type CursorPageMeta struct {
+	// RangeTruncated is nil when absent, distinct from an explicit false
+	// truncation flag.
 	RangeTruncated *bool
-	Total          *int64
+	// Total is a non-negative exact count when present; zero is meaningful.
+	Total *int64
+	// EstimatedTotal is optional estimated collection-size metadata, not a
+	// computed count.
 	EstimatedTotal *CursorEstimatedTotal
 }
 
 // CursorEstimatedTotal describes an optional estimate of collection size.
 type CursorEstimatedTotal struct {
+	// BestGuess is a non-negative estimate when present; nil permits an empty
+	// estimate object.
 	BestGuess *int64
 }
 
@@ -35,7 +42,9 @@ func (metadata CursorPageMeta) Meta() (Meta, error) {
 }
 
 // MetaAs validates and wraps pagination metadata using a profile element
-// alias. An empty member uses the profile's default page name.
+// alias. An empty member uses the profile's default page name. The wrapper is
+// newly allocated but scalar pointers remain borrowed; mutate neither during
+// encoding or validation. Counts are supplied by the caller, not calculated.
 func (metadata CursorPageMeta) MetaAs(member string) (Meta, error) {
 	member, err := cursorPageMember(member)
 	if err != nil {
@@ -228,6 +237,8 @@ func cursorMetaObject(value any) (map[string]any, bool) {
 	}
 }
 
+// Preserve exact large counts and accept only mathematically integral numeric
+// forms; floating-point casts must not silently truncate or overflow int64.
 func cursorInteger(value any) (int64, bool) {
 	switch number := value.(type) {
 	case int:

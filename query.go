@@ -13,31 +13,54 @@ type ParameterFamily map[string][]string
 
 // SortField is one ordered sorting criterion.
 type SortField struct {
-	Name       string
+	// Name is a validated dotted field path; the application owns schema
+	// support.
+	Name string
+	// Descending records the leading minus sign; false means ascending order.
 	Descending bool
 }
 
 // Query contains parsed core query parameters and raw extension points for
 // pagination, filtering, registered custom families, and extensions.
 type Query struct {
-	Include        []string
+	// Include preserves requested relationship paths in supplied order; it does
+	// not fetch them.
+	Include []string
+	// IncludePresent distinguishes an absent include from an explicitly empty
+	// include.
 	IncludePresent bool
-	Fields         map[string][]string
-	Sort           []SortField
-	SortPresent    bool
-	Page           ParameterFamily
-	Filter         ParameterFamily
-	Custom         map[string]ParameterFamily
-	Extensions     map[string]ParameterFamily
+	// Fields maps types to requested field lists, including explicit empty lists;
+	// projection remains caller-owned.
+	Fields map[string][]string
+	// Sort preserves sorting precedence and direction; it does not order backend
+	// results.
+	Sort []SortField
+	// SortPresent distinguishes absence from a parsed sort request.
+	SortPresent bool
+	// Page retains copied pagination family values for endpoint policy.
+	Page ParameterFamily
+	// Filter retains copied filtering family values without defining their
+	// semantics.
+	Filter ParameterFamily
+	// Custom retains copied explicitly registered implementation families.
+	Custom map[string]ParameterFamily
+	// Extensions retains copied explicitly registered extension families.
+	Extensions map[string]ParameterFamily
 }
 
 // QueryError identifies an invalid query parameter and the HTTP status required
 // by JSON:API.
 type QueryError struct {
-	Status    int
+	// Status is the HTTP status the application should use for this refusal.
+	Status int
+	// Parameter is the offending decoded name, or empty for an aggregate limit
+	// failure.
 	Parameter string
-	Code      string
-	Message   string
+	// Code is a machine-readable refusal category.
+	Code string
+	// Message is the diagnostic included by Error; query values are not
+	// universally redacted.
+	Message string
 }
 
 // Error implements error.
@@ -46,7 +69,9 @@ func (err *QueryError) Error() string {
 }
 
 // QueryParser recognizes core JSON:API parameters plus explicitly registered
-// implementation and extension parameter families.
+// implementation and extension parameter families. Constructors copy name
+// registries, which are read-only during parsing. Calls may be concurrent with
+// separate stable inputs; parsing starts no I/O and does not apply backend policy.
 type QueryParser struct {
 	customFamilies      map[string]struct{}
 	extensionNamespaces map[string]struct{}
@@ -112,7 +137,12 @@ func ParseQueryWithLimits(values url.Values, limits QueryLimits) (Query, error) 
 	return parser.Parse(values)
 }
 
-// Parse validates and classifies decoded URL query values.
+// Parse validates decoded values and copies returned container data without
+// changing input. Nil input is an empty query. Error returns a zero Query;
+// parsing does not execute filters, fetch includes, authorize fields or sort
+// backend results. Names are processed deterministically, but input maps must
+// remain stable during the call; HTTP decoding and encoded-size admission are
+// outside this boundary.
 func (parser *QueryParser) Parse(values url.Values) (Query, error) {
 	if err := parser.validateLimits(values); err != nil {
 		return Query{}, err

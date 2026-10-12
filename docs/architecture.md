@@ -72,7 +72,11 @@ that distinction:
 behavior. The application provides `AtomicTransactionBeginner` and
 `AtomicTransaction`, which map each operation to its persistence semantics.
 This is intentionally narrower than an ORM adapter and makes transactional
-ownership explicit.
+ownership explicit. Callback execution remains synchronous. Handled failures
+return no partial response and attempt rollback once; rollback detaches caller
+cancellation without adding a deadline. Implementations must bound cleanup,
+avoid goroutine termination, and own failed partial acquisition and external
+effects. A rollback attempt after a commit error does not prove non-durability.
 
 ## Cursor Pagination boundary
 
@@ -85,11 +89,12 @@ next or previous page exists.
 
 - `DecodeError` identifies JSON pointer, failure code, message, and optional
   underlying parser error.
-- `ValidationError` aggregates deterministic `Violation` values.
+- `ValidationError` aggregates collected `Violation` values. Array traversal
+  retains order; arbitrary map-member traversal does not promise stable order.
 - `QueryError`, `NegotiationError`, and `CursorPaginationError` include the
   protocol HTTP status expected at their boundary.
-- `AtomicExecutionError` preserves operation index, source pointer, cause, and
-  rollback failure when both fail.
+- `AtomicExecutionError` preserves phase, operation index, cause, and rollback
+  failure when both fail. It does not carry a source-pointer field.
 
 The package does not write HTTP responses because applications differ in
 logging, localization, error detail, and status policy.

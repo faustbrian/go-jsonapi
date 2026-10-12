@@ -9,13 +9,22 @@ import (
 // CursorPage supplies the evidence needed to validate one paginated data
 // instance without coupling pagination to a storage implementation.
 type CursorPage struct {
-	Request     CursorPageRequest
-	Links       Links
-	Meta        Meta
-	Items       []Meta
-	HasMore     bool
+	// Request supplies the effective request bounds and metadata alias.
+	Request CursorPageRequest
+	// Links borrows prev/next links whose existence and null state are checked.
+	Links Links
+	// Meta borrows page metadata, including range truncation evidence.
+	Meta Meta
+	// Items contains one borrowed metadata entry per returned resource or
+	// identifier.
+	Items []Meta
+	// HasMore asserts more matching results than fit; it is supplied by the
+	// backend, not derived.
+	HasMore bool
+	// HasPrevious asserts a previous page exists for prev-link consistency.
 	HasPrevious bool
-	HasNext     bool
+	// HasNext asserts a next page exists for next-link consistency.
+	HasNext bool
 }
 
 // Validate checks a top-level paginated data instance.

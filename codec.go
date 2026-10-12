@@ -11,10 +11,16 @@ import (
 
 // DecodeError identifies a malformed JSON representation by JSON Pointer.
 type DecodeError struct {
-	Path    string
-	Code    string
+	// Path identifies the input JSON Pointer; empty denotes the root.
+	Path string
+	// Code classifies syntax, shape, duplicate-member or resource-limit refusal.
+	Code string
+	// Message is the diagnostic included by Error; paths can contain supplied
+	// member names.
 	Message string
-	Cause   error
+	// Cause retains a native decoder error when present, for explicit
+	// diagnostics.
+	Cause error
 }
 
 // Error implements error.
@@ -37,7 +43,9 @@ func Marshal(document Document) ([]byte, error) {
 }
 
 // MarshalWith validates in the supplied protocol context and deterministically
-// encodes a JSON:API document.
+// encodes a JSON:API document. Validation failure returns nil bytes. Custom
+// JSON methods retain native encoding/json behavior, including their errors or
+// panics; no encoding-size budget or callback deadline is added.
 func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
 	if err := validateDocumentMembers(document, nil); err != nil {
 		return nil, err
@@ -49,19 +57,29 @@ func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
 	return json.Marshal(document)
 }
 
-// Unmarshal strictly decodes and validates a JSON:API document.
+// Unmarshal decodes and validates a JSON:API document using default limits.
+// See UnmarshalWithLimits for admission, ownership and scalar-type limitations.
 func Unmarshal(payload []byte) (Document, error) {
 	return UnmarshalWith(payload, ValidationOptions{})
 }
 
-// UnmarshalWith strictly decodes and validates a JSON:API document in the
+// UnmarshalWith decodes and validates a JSON:API document in the
 // supplied protocol context.
 func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) {
 	return UnmarshalWithLimits(payload, options, DecodeLimits{})
 }
 
-// UnmarshalWithLimits strictly decodes and validates a JSON:API document with
-// explicit resource limits. Zero limit fields use production defaults.
+// UnmarshalWithLimits decodes and validates a JSON:API document with
+// explicit resource limits. Zero limit fields use production defaults and
+// negative limits are rejected. Error returns a zero Document, not partial data.
+// Input is borrowed for the call; decoded containers and json.Number values
+// are newly built. Unrecognized and @-Members are discarded after scanning,
+// while duplicate names at every depth are refused before semantic decoding.
+// The caller owns I/O, decompression and limiting allocations before this call.
+// String-member decoding currently inherits encoding/json null-to-empty-string
+// normalization. For example, a null resource ID can pass validation and encode
+// as an empty string; successful decoding does not prove every original scalar
+// wire type satisfied JSON:API. This is a decoder limitation, not a null-ID rule.
 func UnmarshalWithLimits(
 	payload []byte,
 	options ValidationOptions,
@@ -155,6 +173,9 @@ func decodeDocument(payload []byte) (Document, error) {
 	return document, nil
 }
 
+// JSONAPI-DEC-011 resolves RFC 8259 section 4 duplicate-name ambiguity by
+// refusing every duplicate before map decoding could silently keep only one.
+// Unknown and @-Members still consume the same structural admission budgets.
 func rejectDuplicateMembersWithLimits(payload []byte, limits DecodeLimits) error {
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.UseNumber()
@@ -795,6 +816,8 @@ func decodeObject(raw []byte, path string) (map[string]json.RawMessage, error) {
 	return object, nil
 }
 
+// JSONAPI-DEC-001 follows JSON:API 1.1 Document Structure: ignore non-compliant
+// members, but never let them qualify an otherwise empty required object.
 func discardUnknown(object map[string]json.RawMessage, allowed ...string) {
 	known := make(map[string]struct{}, len(allowed))
 	for _, name := range allowed {
@@ -808,6 +831,8 @@ func discardUnknown(object map[string]json.RawMessage, allowed ...string) {
 	}
 }
 
+// Native string decoding accepts JSON null as the zero string; callers record
+// presence separately. No independent null-type refusal occurs at this seam.
 func decodeString(raw json.RawMessage, path string, target *string) error {
 	if err := json.Unmarshal(raw, target); err != nil {
 		return decodeFailure(path, "type", "value must be a string", err)

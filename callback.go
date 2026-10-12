@@ -2,10 +2,18 @@ package jsonapi
 
 // CallbackError contains a failure from an application-supplied validator.
 // Error deliberately omits the callback's error or panic value. Cause and
-// PanicValue remain available for explicit diagnostics.
+// PanicValue remain available for explicit diagnostics. Only wrapped validator
+// seams convert ordinary panics; custom JSON methods, blocking and goroutine
+// termination retain their own behavior. Error does not globally redact input
+// paths, URI configuration or other package diagnostics.
 type CallbackError struct {
-	Phase      string
-	Cause      error
+	// Phase names the invoked extension, profile, cursor or sort seam.
+	Phase string
+	// Cause retains returned errors or error-valued panics without redacting
+	// their contents.
+	Cause error
+	// PanicValue retains the original panic value; use CallbackPanicValue to
+	// distinguish a panic.
 	PanicValue any
 	panicked   bool
 }
@@ -30,6 +38,8 @@ func (err *CallbackError) CallbackPanicValue() (any, bool) {
 	return err.PanicValue, err.panicked
 }
 
+// callApplicationCallback converts ordinary panics at the declared seam only.
+// It is not a goroutine, timeout, mutation or runtime.Goexit isolation boundary.
 func callApplicationCallback(phase string, callback func() error) (err error) {
 	defer func() {
 		if value := recover(); value != nil {

@@ -14,8 +14,12 @@ const MediaTypeJSONAPI = "application/vnd.api+json"
 
 // MediaType describes extensions and profiles applied to a JSON:API payload.
 type MediaType struct {
+	// Extensions lists applied extension URIs; String canonicalizes order and
+	// removes duplicates.
 	Extensions []string
-	Profiles   []string
+	// Profiles lists applied profile URIs; declaring them does not execute
+	// profile semantics.
+	Profiles []string
 }
 
 // String returns the canonical JSON:API Content-Type value.
@@ -33,16 +37,25 @@ func (mediaType MediaType) String() string {
 
 // NegotiatedMedia is the representation selected for an Accept header.
 type NegotiatedMedia struct {
-	MediaType   MediaType
+	// MediaType is the selected extension/profile declaration, not a configured
+	// Codec.
+	MediaType MediaType
+	// ContentType is its canonical JSON:API wire header value.
 	ContentType string
-	VaryAccept  bool
+	// VaryAccept tells the application to include Accept in its response Vary
+	// policy.
+	VaryAccept bool
 }
 
 // NegotiationError describes an HTTP content-negotiation failure without
 // coupling the package to a particular HTTP framework.
 type NegotiationError struct {
-	Status  int
-	Code    string
+	// Status is the protocol HTTP failure status; configuration limit errors may
+	// use zero.
+	Status int
+	// Code is a machine-readable negotiation refusal category.
+	Code string
+	// Message is the diagnostic included in Error.
 	Message string
 }
 
@@ -52,7 +65,10 @@ func (err *NegotiationError) Error() string {
 }
 
 // Negotiator validates JSON:API request content types and selects response
-// media types from Accept headers.
+// media types from Accept headers. Constructors copy URI registries, which
+// remain read-only; calls can run concurrently on a constructed Negotiator.
+// Declared support does not configure a Codec or implement extension/profile
+// semantics, and this type never writes HTTP headers or responses.
 type Negotiator struct {
 	extensions map[string]struct{}
 	profiles   map[string]struct{}
@@ -269,6 +285,9 @@ func (negotiator *Negotiator) acceptCandidate(raw string) (acceptCandidate, bool
 	}, true
 }
 
+// JSONAPI-DEC-013 follows RFC 9110 section 12.5.1: specific matching ranges
+// govern quality before representation ranking. Canonical lexical ties are our
+// explicit deterministic policy, not an HTTP preference for header order.
 func qualityForRepresentation(
 	representation acceptCandidate,
 	ranges []acceptCandidate,

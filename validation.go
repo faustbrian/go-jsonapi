@@ -24,13 +24,18 @@ const (
 
 // Violation describes one JSON:API conformance failure.
 type Violation struct {
-	Path    string
-	Code    string
+	// Path is the offending JSON Pointer, with empty string denoting the root.
+	Path string
+	// Code is a machine-readable rule category, not an HTTP status.
+	Code string
+	// Message describes the rule failure and may include caller-supplied names.
 	Message string
 }
 
 // ValidationError reports every conformance violation found in a document.
 type ValidationError struct {
+	// Violations retains collected rule failures; Error summarizes the first, not
+	// the entire set.
 	Violations []Violation
 	causes     []error
 }
@@ -56,9 +61,14 @@ const (
 
 // ValidationOptions configures context and optional endpoint identity checks.
 type ValidationOptions struct {
-	Context      ValidationContext
+	// Context selects generic, response or specific mutation rules; zero is
+	// GenericDocument.
+	Context ValidationContext
+	// ExpectedType enables endpoint type matching when non-empty.
 	ExpectedType string
-	ExpectedID   string
+	// ExpectedID enables endpoint ID matching when non-empty; ExpectedIDPresent
+	// also admits an empty expectation.
+	ExpectedID string
 	// ExpectedIDPresent enables endpoint identity matching when ExpectedID is
 	// empty. A non-empty ExpectedID enables matching without this flag.
 	ExpectedIDPresent bool
@@ -94,7 +104,11 @@ func (err *ValidationError) Unwrap() []error {
 }
 
 // Validate checks the context-independent structural requirements of a
-// JSON:API document and returns all violations in document order.
+// JSON:API document and returns collected violations. Array order is retained;
+// map-member traversal does not promise a stable ordering. Validate is not the
+// member-registry or JSON encoder boundary and does not apply byte/value
+// DecodeLimits to caller-built objects. Constructed links still receive the
+// default depth and cycle checks.
 func (document Document) Validate() error {
 	return document.ValidateWith(ValidationOptions{})
 }
@@ -660,6 +674,8 @@ func validLanguageTag(tag string) bool {
 	return err == nil
 }
 
+// JSONAPI-DEC-012 follows RFC 8288 section 2.1.1: registered relation tokens
+// use the lowercase grammar; extension relation types are absolute URIs.
 func validLinkRelation(relation string) bool {
 	if registeredLinkRelation.MatchString(relation) {
 		return true
@@ -875,6 +891,9 @@ func (validator *documentValidator) validateIncluded(
 		}
 	}
 
+	// JSONAPI-DEC-005: index both ID/LID aliases, then traverse each included
+	// resource once so cycles cannot defeat full-linkage reachability. Sparse
+	// fieldset omission is the explicit specification exception, not a wildcard.
 	reachable := make(map[int]bool, len(document.Included))
 	queue := validator.primaryLinkage(document.Data)
 	for len(queue) > 0 {
@@ -1102,6 +1121,8 @@ func relationshipIdentifiers(relationships Relationships) []Identifier {
 	return identifiers
 }
 
+// Keep server and local identity domains distinct even for equal text; both
+// aliases can identify one resource, but a local ID must not merge unrelated IDs.
 func resourceKey(resourceType, id, lid string, idPresent bool) string {
 	if idPresent {
 		return resourceType + "\x00id\x00" + id

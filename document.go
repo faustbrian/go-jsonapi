@@ -1,13 +1,36 @@
-// Package jsonapi provides explicit types for building and validating
-// JSON:API 1.1 documents.
+// Package jsonapi implements explicit JSON:API 1.1 document models, checked
+// encoding/decoding, query parsing and HTTP media negotiation. It also provides
+// separate Atomic Operations and Cursor Pagination helpers. The base authority
+// is JSON:API 1.1 at json-api/json-api revision
+// 52fc018adcc15358cb0f9d3de119f7e0fbe34ea6; the interpretation register is
+// docs/specification-decisions.md, not a claim of complete server behavior.
+//
+// Start with Marshal/Unmarshal for core documents, NewCodec for explicitly
+// registered extensions/profiles, NewQueryParser for query families and
+// NewNegotiator for headers. MarshalJSON methods are wire encoders, not the
+// checked API: direct encoding/json use bypasses protocol validation. Use
+// With methods and data constructors to preserve absence, null and empty values.
+// Model copies and With methods are shallow; maps, pointers and nested values
+// stay caller-owned and must not be mutated during use.
+//
+// Decoder budgets bound byte/structural work, not custom JSON methods or
+// application callbacks. Those collaborators must be prompt, safe for concurrent
+// use where needed, and free of uncoordinated mutation. No package goroutine,
+// background I/O or global protocol registry is acquired. Applications retain
+// HTTP response writing, URI resolution, authorization, field projection,
+// cursor authenticity, storage transactions and external-effect/retry policy.
+// The independently resolved peer harness is outside the public module.
 package jsonapi
 
 import "encoding/json"
 
-// Attributes contains the non-relationship fields of a resource object.
+// Attributes contains caller-owned non-relationship resource fields. Values
+// may contain mutable containers or custom JSON methods; constructors do not
+// deep-copy them and application code owns their resource/disclosure policy.
 type Attributes map[string]any
 
-// Meta contains non-standard information associated with a JSON:API object.
+// Meta contains caller-owned non-standard information. Nil means absence;
+// non-nil empty metadata preserves object presence. Nested values are borrowed.
 type Meta map[string]any
 
 // Document is a top-level JSON:API document.
@@ -15,13 +38,25 @@ type Meta map[string]any
 // Data is a pointer so callers can distinguish an absent data member from a
 // data member whose value is null.
 type Document struct {
-	JSONAPI           *JSONAPI         `json:"jsonapi,omitempty"`
-	Links             Links            `json:"links,omitempty"`
-	Data              *PrimaryData     `json:"data,omitempty"`
-	Included          []ResourceObject `json:"included,omitempty"`
-	Errors            []ErrorObject    `json:"errors,omitempty"`
-	Meta              Meta             `json:"meta,omitempty"`
-	AdditionalMembers Members          `json:"-"`
+	// JSONAPI declares protocol metadata; nil omits it and does not configure a
+	// Codec.
+	JSONAPI *JSONAPI `json:"jsonapi,omitempty"`
+	// Links holds top-level links; nil omits them, a non-nil empty map emits {}.
+	Links Links `json:"links,omitempty"`
+	// Data is nil when absent; NullData distinguishes an explicit null member.
+	Data *PrimaryData `json:"data,omitempty"`
+	// Included holds compound resources; nil omits them, an empty non-nil slice
+	// emits [].
+	Included []ResourceObject `json:"included,omitempty"`
+	// Errors holds error objects; nil omits them and even an empty present array
+	// conflicts with Data.
+	Errors []ErrorObject `json:"errors,omitempty"`
+	// Meta holds caller-owned metadata; nil omits it, an empty non-nil map emits
+	// {}.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
+	AdditionalMembers Members `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -66,11 +101,21 @@ func (document Document) MarshalJSON() ([]byte, error) {
 // JSONAPI describes the JSON:API implementation and applied extensions and
 // profiles.
 type JSONAPI struct {
-	Version           string   `json:"version,omitempty"`
-	Ext               []string `json:"ext,omitempty"`
-	Profile           []string `json:"profile,omitempty"`
-	Meta              Meta     `json:"meta,omitempty"`
-	AdditionalMembers Members  `json:"-"`
+	// Version is optional; WithVersion preserves presence even for an empty
+	// string.
+	Version string `json:"version,omitempty"`
+	// Ext lists applied extension URIs; nil omits the declaration, not the
+	// registry.
+	Ext []string `json:"ext,omitempty"`
+	// Profile lists applied profile URIs; declarations alone do not activate
+	// callbacks.
+	Profile []string `json:"profile,omitempty"`
+	// Meta holds caller-owned protocol metadata, preserving non-nil empty
+	// presence.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
+	AdditionalMembers Members `json:"-"`
 	versionPresent    bool
 }
 
@@ -115,14 +160,25 @@ func (object JSONAPI) MarshalJSON() ([]byte, error) {
 
 // ResourceObject is a JSON:API resource object.
 type ResourceObject struct {
-	Type              string        `json:"type"`
-	ID                string        `json:"id,omitempty"`
-	LID               string        `json:"lid,omitempty"`
-	Attributes        Attributes    `json:"attributes,omitempty"`
-	Relationships     Relationships `json:"relationships,omitempty"`
-	Links             Links         `json:"links,omitempty"`
-	Meta              Meta          `json:"meta,omitempty"`
-	AdditionalMembers Members       `json:"-"`
+	// Type names the required resource type; validation rejects an empty type.
+	Type string `json:"type"`
+	// ID is server identity; WithID preserves explicit empty-string presence.
+	ID string `json:"id,omitempty"`
+	// LID is local identity; WithLID preserves presence separately from ID.
+	LID string `json:"lid,omitempty"`
+	// Attributes holds caller-owned values; these names share the namespace with
+	// Relationships.
+	Attributes Attributes `json:"attributes,omitempty"`
+	// Relationships holds caller-owned linkage and relationship metadata, not
+	// fetched resources.
+	Relationships Relationships `json:"relationships,omitempty"`
+	// Links holds caller-owned resource links, preserving non-nil empty presence.
+	Links Links `json:"links,omitempty"`
+	// Meta holds caller-owned non-standard resource information.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
+	AdditionalMembers Members `json:"-"`
 	idPresent         bool
 	lidPresent        bool
 }
@@ -194,10 +250,18 @@ func (resource ResourceObject) MarshalJSON() ([]byte, error) {
 
 // Identifier identifies a resource by type and either server or local ID.
 type Identifier struct {
-	Type              string  `json:"type"`
-	ID                string  `json:"id,omitempty"`
-	LID               string  `json:"lid,omitempty"`
-	Meta              Meta    `json:"meta,omitempty"`
+	// Type names the resource type to which this linkage refers.
+	Type string `json:"type"`
+	// ID is server identity; WithID retains presence even when empty.
+	ID string `json:"id,omitempty"`
+	// LID is local identity; context validation determines whether it can satisfy
+	// identity.
+	LID string `json:"lid,omitempty"`
+	// Meta holds caller-owned linkage metadata, preserving non-nil empty
+	// presence.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
 	AdditionalMembers Members `json:"-"`
 	idPresent         bool
 	lidPresent        bool
@@ -259,7 +323,8 @@ const (
 )
 
 // PrimaryData represents null, one resource, or a collection of resources.
-// Construct values with NullData, ResourceData, or ResourceCollection.
+// Construct values with NullData, ResourceData, or ResourceCollection. The zero
+// value encodes null through MarshalJSON but is not valid checked primary data.
 type PrimaryData struct {
 	kind primaryDataKind
 	one  *ResourceObject
@@ -271,13 +336,15 @@ func NullData() *PrimaryData {
 	return &PrimaryData{kind: primaryDataNull}
 }
 
-// ResourceData returns a primary data member containing one resource.
+// ResourceData copies the outer resource value into primary data. Nested maps,
+// slices, pointers and custom values remain shared with the caller.
 func ResourceData(resource ResourceObject) *PrimaryData {
 	return &PrimaryData{kind: primaryDataOne, one: &resource}
 }
 
-// ResourceCollection returns a primary data member containing a resource
-// collection. With no arguments it serializes as an empty array.
+// ResourceCollection copies the outer slice and resource values into primary
+// data. With no arguments it encodes an empty array. Nested values remain shared
+// with the caller, so this is not a deep snapshot.
 func ResourceCollection(resources ...ResourceObject) *PrimaryData {
 	items := make([]ResourceObject, len(resources))
 	copy(items, resources)
@@ -297,15 +364,23 @@ func (data PrimaryData) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// Relationships maps relationship names to relationship objects.
+// Relationships maps relationship names to caller-owned relationship objects.
+// It shares the field namespace with Attributes; validation does not fetch links.
 type Relationships map[string]Relationship
 
 // Relationship is a JSON:API relationship object.
 type Relationship struct {
-	Links             Links             `json:"links,omitempty"`
-	Data              *RelationshipData `json:"data,omitempty"`
-	Meta              Meta              `json:"meta,omitempty"`
-	AdditionalMembers Members           `json:"-"`
+	// Links holds relationship links; qualifying links can satisfy a relationship
+	// with absent Data.
+	Links Links `json:"links,omitempty"`
+	// Data is nil when linkage is absent; use NullRelationship for explicit null
+	// linkage.
+	Data *RelationshipData `json:"data,omitempty"`
+	// Meta can supply the recognized metadata member required by a relationship.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
+	AdditionalMembers Members `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler while preserving explicitly empty
@@ -354,13 +429,15 @@ func NullRelationship() *RelationshipData {
 	return &RelationshipData{kind: relationshipDataNull}
 }
 
-// ToOne returns relationship data containing one resource identifier.
+// ToOne copies an outer resource identifier into relationship data; metadata
+// and additional member values remain shared.
 func ToOne(identifier Identifier) *RelationshipData {
 	return &RelationshipData{kind: relationshipDataOne, one: &identifier}
 }
 
-// ToMany returns relationship data containing a resource identifier
-// collection. With no arguments it serializes as an empty array.
+// ToMany copies the outer identifier slice into relationship data. With no
+// arguments it encodes an empty array. Identifier metadata and additional values
+// remain shared with the caller.
 func ToMany(identifiers ...Identifier) *RelationshipData {
 	items := make([]Identifier, len(identifiers))
 	copy(items, identifiers)
@@ -380,7 +457,8 @@ func (data RelationshipData) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// Links maps link relation names to links.
+// Links maps relation names to caller-owned links. Validation checks shape and
+// URI syntax, not authorization, reachability or SSRF policy; no link is fetched.
 type Links map[string]Link
 
 // Link is a string, object, null, or registered extension-defined links-object
@@ -407,13 +485,26 @@ type Link struct {
 
 // LinkObject contains every member supported by a JSON:API 1.1 link object.
 type LinkObject struct {
-	Href              string
-	Rel               string
-	DescribedBy       *Link
-	Title             string
-	Type              string
-	Hreflang          *LinkHreflang
-	Meta              Meta
+	// Href is a URI-reference; LinkFromObject marks it present even when empty.
+	Href string
+	// Rel is a registered relation token or absolute extension URI, not a
+	// dereferenced endpoint.
+	Rel string
+	// DescribedBy borrows the link to a resource description; recursive links
+	// require bounded structure.
+	DescribedBy *Link
+	// Title is human-readable link text; WithTitle on Link preserves explicit
+	// empty presence.
+	Title string
+	// Type is the target media type hint, not the resource type.
+	Type string
+	// Hreflang borrows a scalar or array language hint; LanguageTag and
+	// LanguageTags choose the wire form.
+	Hreflang *LinkHreflang
+	// Meta borrows non-standard link metadata.
+	Meta Meta
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
 	AdditionalMembers Members
 }
 
@@ -434,7 +525,8 @@ func ObjectLink(href string, meta Meta) Link {
 	return LinkFromObject(LinkObject{Href: href, Meta: meta})
 }
 
-// LinkFromObject returns a link represented by a JSON:API 1.1 link object.
+// LinkFromObject copies the outer link object into a wire representation; nested
+// link, language, metadata and additional-member collaborators remain borrowed.
 func LinkFromObject(object LinkObject) Link {
 	return Link{
 		href:              object.Href,
@@ -503,7 +595,7 @@ func ExtensionLinkValue(value any) Link {
 }
 
 // ExtensionValue returns the opaque extension-defined links-object member
-// value and whether this Link represents one.
+// value and whether this Link represents one. The value is borrowed, not cloned.
 func (link Link) ExtensionValue() (any, bool) {
 	return link.extensionValue, link.extension
 }
@@ -562,15 +654,30 @@ func (link Link) hreflangValue() any {
 
 // ErrorObject describes one JSON:API error.
 type ErrorObject struct {
-	ID                string       `json:"id,omitempty"`
-	Links             Links        `json:"links,omitempty"`
-	Status            string       `json:"status,omitempty"`
-	Code              string       `json:"code,omitempty"`
-	Title             string       `json:"title,omitempty"`
-	Detail            string       `json:"detail,omitempty"`
-	Source            *ErrorSource `json:"source,omitempty"`
-	Meta              Meta         `json:"meta,omitempty"`
-	AdditionalMembers Members      `json:"-"`
+	// ID identifies this occurrence; WithID preserves an explicitly empty member.
+	ID string `json:"id,omitempty"`
+	// Links holds error links such as about and type, not automatic HTTP
+	// redirects.
+	Links Links `json:"links,omitempty"`
+	// Status is a three-digit HTTP status string when present; WithStatus
+	// preserves presence.
+	Status string `json:"status,omitempty"`
+	// Code is application-specific, not an HTTP status or automatic retry
+	// classification.
+	Code string `json:"code,omitempty"`
+	// Title is a human-readable summary; caller policy owns disclosure and
+	// localization.
+	Title string `json:"title,omitempty"`
+	// Detail is occurrence-specific text; the caller is responsible for safe
+	// disclosure.
+	Detail string `json:"detail,omitempty"`
+	// Source borrows request-source metadata; nil omits it.
+	Source *ErrorSource `json:"source,omitempty"`
+	// Meta borrows non-standard error metadata.
+	Meta Meta `json:"meta,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
+	AdditionalMembers Members `json:"-"`
 	present           uint8
 }
 
@@ -654,9 +761,17 @@ func (apiError ErrorObject) MarshalJSON() ([]byte, error) {
 
 // ErrorSource identifies the source of an error in a request.
 type ErrorSource struct {
-	Pointer           string  `json:"pointer,omitempty"`
-	Parameter         string  `json:"parameter,omitempty"`
-	Header            string  `json:"header,omitempty"`
+	// Pointer identifies a request value by JSON Pointer; WithPointer preserves
+	// the empty root pointer.
+	Pointer string `json:"pointer,omitempty"`
+	// Parameter identifies a request query parameter; WithParameter preserves
+	// explicit empty presence.
+	Parameter string `json:"parameter,omitempty"`
+	// Header identifies a request header; WithHeader preserves explicit empty
+	// presence.
+	Header string `json:"header,omitempty"`
+	// AdditionalMembers holds caller-owned custom members; checked Codec encoding
+	// requires scope registration (except @-Members).
 	AdditionalMembers Members `json:"-"`
 	present           uint8
 }
@@ -703,6 +818,8 @@ func (source ErrorSource) MarshalJSON() ([]byte, error) {
 	return marshalObjectWithMembers(core, source.AdditionalMembers)
 }
 
+// Presence is independent of content: the empty string may be a present ID
+// or pointer, while an untouched optional field is omitted.
 func optionalString(value string, explicitlyPresent bool) *string {
 	if value == "" && !explicitlyPresent {
 		return nil

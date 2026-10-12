@@ -40,22 +40,41 @@ const (
 )
 
 // DecodeLimits bounds resource use before semantic document decoding. Zero
-// fields use the production defaults; negative fields are invalid.
+// fields use production defaults; negative fields are invalid and positive
+// values may increase them. Budgets do not bound caller allocation of payloads,
+// decompression, custom JSON methods or validator callback resource use.
 type DecodeLimits struct {
+	// MaxDocumentBytes bounds encoded bytes before UTF-8/syntax checks or
+	// semantic decoding.
 	MaxDocumentBytes int
-	MaxNestingDepth  int
+	// MaxNestingDepth bounds nested object/array depth during the token scan.
+	MaxNestingDepth int
+	// MaxObjectMembers bounds entries in each object, including ignored members.
 	MaxObjectMembers int
-	MaxArrayItems    int
-	MaxTotalValues   int
+	// MaxArrayItems bounds items in each JSON array, not just resource
+	// collections.
+	MaxArrayItems int
+	// MaxTotalValues bounds aggregate scalar/container visits across the scanned
+	// document.
+	MaxTotalValues int
 }
 
 // NegotiationLimits bounds media type configuration and header processing.
+// Zero fields select defaults, negative fields are invalid, and positive fields
+// may increase defaults; the caller still owns HTTP transport/header admission.
 type NegotiationLimits struct {
-	MaxHeaderBytes      int
+	// MaxHeaderBytes bounds one supplied Content-Type or Accept value before
+	// parsing.
+	MaxHeaderBytes int
+	// MaxAcceptCandidates bounds comma-separated Accept alternatives.
 	MaxAcceptCandidates int
-	MaxParameterURIs    int
-	MaxURIBytes         int
-	MaxSupportedURIs    int
+	// MaxParameterURIs bounds URIs in one ext or profile parameter.
+	MaxParameterURIs int
+	// MaxURIBytes bounds each configured or parsed extension/profile URI.
+	MaxURIBytes int
+	// MaxSupportedURIs bounds configured extension and profile entries in
+	// aggregate.
+	MaxSupportedURIs int
 }
 
 // DefaultNegotiationLimits returns bounded media type defaults.
@@ -71,14 +90,23 @@ func DefaultNegotiationLimits() NegotiationLimits {
 
 // QueryLimits bounds work performed on decoded URL query values. The HTTP
 // layer remains responsible for limiting the encoded request-target length.
+// Zero fields select defaults; negative fields are invalid and positive fields
+// may increase defaults. CursorPagination always uses its own default budgets.
 type QueryLimits struct {
+	// MaxParameters bounds distinct decoded parameter names.
 	MaxParameters int
-	MaxValues     int
-	MaxNameBytes  int
+	// MaxValues bounds all decoded values across names.
+	MaxValues int
+	// MaxNameBytes bounds each decoded name before family parsing.
+	MaxNameBytes int
+	// MaxValueBytes bounds each decoded value before list parsing.
 	MaxValueBytes int
+	// MaxTotalBytes bounds decoded names and values in aggregate.
 	MaxTotalBytes int
-	MaxSelectors  int
-	MaxListItems  int
+	// MaxSelectors bounds bracket selectors within one parameter name.
+	MaxSelectors int
+	// MaxListItems bounds entries in a parsed include, fieldset or sort list.
+	MaxListItems int
 }
 
 // DefaultQueryLimits returns the package's bounded query defaults.

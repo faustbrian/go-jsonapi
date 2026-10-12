@@ -8,29 +8,45 @@ import (
 // AtomicTransaction applies operations within one application-owned
 // transaction. Implementations must not commit from ApplyAtomic.
 type AtomicTransaction interface {
+	// ApplyAtomic applies one operation without committing and returns its
+	// corresponding result.
 	ApplyAtomic(context.Context, AtomicOperation) (AtomicResult, error)
+	// CommitAtomic finalizes the transaction after all results pass validation.
 	CommitAtomic(context.Context) error
+	// RollbackAtomic attempts cleanup once after a handled post-begin failure;
+	// bound work independently of caller cancellation.
 	RollbackAtomic(context.Context) error
 }
 
 // AtomicTransactionBeginner starts an application-owned transaction.
 type AtomicTransactionBeginner interface {
+	// BeginAtomic returns a usable transaction on success; failed partial
+	// acquisition remains the implementation's cleanup responsibility.
 	BeginAtomic(context.Context) (AtomicTransaction, error)
 }
 
 // AtomicExecutionError identifies the failed transaction phase and operation.
 // OperationIndex is -1 for begin and commit failures.
 type AtomicExecutionError struct {
-	Phase          string
+	// Phase names begin, apply, result-validation or commit failure.
+	Phase string
+	// OperationIndex is the zero-based apply index, or -1 for transaction-wide
+	// failures.
 	OperationIndex int
-	Cause          error
-	RollbackCause  error
+	// Cause preserves the original failure, including sensitive application
+	// diagnostic data.
+	Cause error
+	// RollbackCause preserves a separate rollback failure when cleanup was
+	// attempted.
+	RollbackCause error
 }
 
 // AtomicPanicError identifies a panic raised by an application transaction
 // callback. Value is retained for explicit diagnostics but omitted from Error.
 type AtomicPanicError struct {
+	// Phase names the transaction callback that panicked.
 	Phase string
+	// Value retains its original panic value; Error deliberately omits it.
 	Value any
 }
 
@@ -68,8 +84,18 @@ func (err *AtomicExecutionError) Unwrap() []error {
 }
 
 // ExecuteAtomic validates an Atomic request, applies operations in document
-// order, and commits only after every operation succeeds. Any failure after a
-// transaction begins triggers exactly one rollback attempt.
+// order, validates corresponding results, and commits only after success. Nil
+// beginner/ctx and canceled ctx are refused after request validation. Each
+// handled post-begin failure returns zero response data and attempts rollback
+// once, including a commit error; that attempt cannot establish commit durability.
+// Ordinary transaction callback panics become AtomicPanicError. Blocking and
+// goroutine termination are not isolated, and no retry is performed.
+//
+// Rollback receives context.WithoutCancel(ctx), retaining values but removing
+// caller cancellation/deadlines with no replacement package deadline. The
+// transaction implementation must bound cleanup independently. Failed partial
+// Begin acquisition stays implementation-owned; external effects and transaction
+// isolation/atomicity are application obligations, not provided by this helper.
 func ExecuteAtomic(
 	ctx context.Context,
 	beginner AtomicTransactionBeginner,
@@ -158,7 +184,9 @@ func atomicExecutionFailure(
 		Phase:          phase,
 		OperationIndex: operationIndex,
 		Cause:          cause,
-		RollbackCause:  rollbackAtomicSafely(context.WithoutCancel(ctx), transaction),
+		// Detach cancellation so cleanup is attempted; the application adapter
+		// must supply its own bound because this helper adds no deadline.
+		RollbackCause: rollbackAtomicSafely(context.WithoutCancel(ctx), transaction),
 	}
 }
 

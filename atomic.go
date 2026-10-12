@@ -31,29 +31,54 @@ const (
 
 // AtomicValidationOptions configures request or response validation.
 type AtomicValidationOptions struct {
-	Context             AtomicValidationContext
+	// Context selects generic, request or response Atomic rules.
+	Context AtomicValidationContext
+	// ExpectedResultCount checks successful response length when positive; zero
+	// disables this standalone count check.
 	ExpectedResultCount int
-	ExpectedOperations  []AtomicOperation
+	// ExpectedOperations borrows the request operations to check result shape and
+	// correspondence; nil omits that check.
+	ExpectedOperations []AtomicOperation
 }
 
 // AtomicDocument is a document using the official Atomic Operations
 // extension. Operations, results, errors, and meta retain nil-versus-empty
 // presence semantics.
 type AtomicDocument struct {
-	JSONAPI    *JSONAPI
-	Links      Links
+	// JSONAPI borrows optional protocol metadata; a non-nil Ext declaration
+	// must list the Atomic extension.
+	JSONAPI *JSONAPI
+	// Links borrows optional top-level links.
+	Links Links
+	// Operations is an ordered request sequence; nil omits it and a present empty
+	// slice is invalid.
 	Operations []AtomicOperation
-	Results    []AtomicResult
-	Errors     []ErrorObject
-	Meta       Meta
+	// Results is the corresponding response sequence; nil omits it and a present
+	// empty slice is invalid.
+	Results []AtomicResult
+	// Errors holds an error response and cannot coexist with Operations or
+	// Results.
+	Errors []ErrorObject
+	// Meta borrows optional top-level metadata, including explicitly empty
+	// presence.
+	Meta Meta
 }
 
 // AtomicOperation describes one ordered mutation in an atomic request.
 type AtomicOperation struct {
-	Op          AtomicOperationCode
-	Ref         *AtomicReference
-	Href        string
-	Data        *PrimaryData
+	// Op selects add, update or remove semantics; the application implements
+	// persistence.
+	Op AtomicOperationCode
+	// Ref borrows a resource/relationship target and is mutually exclusive with
+	// Href.
+	Ref *AtomicReference
+	// Href targets an application-resolved URI-reference; WithHref preserves
+	// explicit presence.
+	Href string
+	// Data borrows operation data; allowed shapes depend on Op and the target
+	// kind.
+	Data *PrimaryData
+	// Meta borrows operation-specific metadata.
 	Meta        Meta
 	hrefPresent bool
 }
@@ -72,9 +97,14 @@ func (operation AtomicOperation) hasHref() bool {
 
 // AtomicReference identifies a resource or one of its relationships.
 type AtomicReference struct {
-	Type         string `json:"type"`
-	ID           string `json:"id,omitempty"`
-	LID          string `json:"lid,omitempty"`
+	// Type names the target resource type.
+	Type string `json:"type"`
+	// ID supplies server identity; WithID preserves empty presence.
+	ID string `json:"id,omitempty"`
+	// LID supplies local identity for request-scoped references.
+	LID string `json:"lid,omitempty"`
+	// Relationship names an optional relationship target; WithRelationship
+	// preserves presence.
 	Relationship string `json:"relationship,omitempty"`
 	idPresent    bool
 	lidPresent   bool
@@ -118,7 +148,10 @@ func (reference AtomicReference) hasRelationship() bool {
 
 // AtomicResult describes the result at the same position as its operation.
 type AtomicResult struct {
+	// Data borrows the result data; nil omits it and correspondence rules depend
+	// on the operation.
 	Data *PrimaryData
+	// Meta borrows optional result metadata.
 	Meta Meta
 }
 
@@ -295,6 +328,8 @@ func atomicRelationshipOperation(operation AtomicOperation) bool {
 	}
 }
 
+// Atomic Operations requires document-order processing: local references may
+// depend only on assignments introduced by prior operations, not future adds.
 func (validator *documentValidator) validateAtomicOperations(operations []AtomicOperation) {
 	assigned := make(map[string]struct{})
 	for index, operation := range operations {

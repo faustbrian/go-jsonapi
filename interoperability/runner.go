@@ -1,3 +1,9 @@
+// Command interoperability compares five overlapping JSON:API decisions with
+// pinned DataDog/jsonapi v0.13.0 and writes tab-separated observations to stdout.
+// It uses actual build dependency versions, including the repository workspace
+// when selected; results are not whole-protocol compliance or current-main proof.
+// Peer dependencies remain outside the public module. No application server,
+// storage transaction or remote URI discovery is exercised.
 package main
 
 import (
@@ -163,6 +169,8 @@ func moduleVersion(path string) (string, error) {
 	return "", fmt.Errorf("missing differential module version for %s", path)
 }
 
+// write reports the writer's terminal error after flushing; output may already
+// be partial, and the caller retains the writer and its close responsibility.
 func write(target io.Writer, observations []observation) error {
 	writer := csv.NewWriter(target)
 	writer.Comma = '\t'
