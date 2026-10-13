@@ -1,5 +1,7 @@
 # Performance and resilience
 
+[Documentation index](README.md)
+
 Correctness is the primary performance constraint: the package does not trade
 strict validation or deterministic output for speculative speed.
 
@@ -91,3 +93,5 @@ per decoded name, 8,192 bytes per value, 64 KiB in aggregate, 32 selectors,
 and 1,000 comma-list entries. `DefaultNegotiationLimits` bounds headers at
 32 KiB, Accept candidates and parameter URI lists at 100, individual URIs at
 2,048 bytes, and configured URIs at 1,000.
+
+Continue with [Public API reference](api.md).

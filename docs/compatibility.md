@@ -1,5 +1,7 @@
 # Compatibility policy
 
+[Documentation index](README.md)
+
 Resolved choices in the
 [specification decision register](specification-decisions.md) are part of this
 policy. Changing one requires specification review and a changelog entry even

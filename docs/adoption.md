@@ -1,5 +1,7 @@
 # Adoption guide
 
+[Documentation index](README.md)
+
 This guide describes the boundary between `jsonapi` and a production
 service. The package owns protocol representation and validation. Your service
 owns routing, authorization, persistence, domain mapping, and response policy.
@@ -211,3 +213,5 @@ document and a valid 204 response.
 5. monitor typed error codes and pointers;
 6. treat output ordering and omission changes as compatibility changes;
 7. pin a tagged release before production deployment.
+
+Continue with [Public API reference](api.md).

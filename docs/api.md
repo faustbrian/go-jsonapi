@@ -1,5 +1,7 @@
 # Public API reference
 
+[Documentation index](README.md)
+
 This guide groups the complete exported surface by purpose. Symbol comments in
 the source are the canonical field-level reference and are rendered by
 `go doc github.com/faustbrian/go-jsonapi/v2` from a module selecting the
@@ -212,3 +214,5 @@ validation, and emitted in max-size error metadata. `CursorPage.HasPrevious`
 and `HasNext` provide the boundary evidence needed to enforce required null or
 non-null `prev` and `next` links; `HasMore` separately means matching results
 were omitted because the used page size was reached.
+
+Continue with [Adoption guide](adoption.md).

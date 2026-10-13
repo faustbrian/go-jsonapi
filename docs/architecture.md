@@ -1,5 +1,7 @@
 # Architecture
 
+[Documentation index](README.md)
+
 ## Layers
 
 The package separates protocol responsibilities into five explicit layers.
@@ -98,3 +100,5 @@ next or previous page exists.
 
 The package does not write HTTP responses because applications differ in
 logging, localization, error detail, and status policy.
+
+Continue with [Public API reference](api.md).

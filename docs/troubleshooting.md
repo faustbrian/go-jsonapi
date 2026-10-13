@@ -1,5 +1,7 @@
 # Troubleshooting
 
+[Documentation index](README.md)
+
 ## An extension member disappears while decoding
 
 The core decoder ignores and discards non-compliant members as JSON:API
@@ -92,3 +94,5 @@ This is intentional. Extension/profile validators and cursor/sort hooks return
 a redacted `CallbackError` so application values and panic text do not enter a
 client-facing error accidentally. Use `errors.Is`, `errors.As`,
 `CallbackPhase`, and `CallbackPanicValue` in trusted diagnostics only.
+
+Continue with [Public API reference](api.md).

@@ -1,5 +1,7 @@
 # JSON:API recommendations
 
+[Documentation index](README.md)
+
 The [official recommendations](https://jsonapi.org/recommendations/) are
 useful consistency guidance but are not normative JSON:API requirements. This
 matrix deliberately keeps them separate from conformance claims.
@@ -35,3 +37,5 @@ does not reject alternative valid URL designs or application semantics.
 
 Enforcing these in a transport-neutral document package would blur
 recommendations into normative rules and couple unrelated applications.
+
+Continue with [Public API reference](api.md).

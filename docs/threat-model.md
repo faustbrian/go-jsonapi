@@ -1,5 +1,7 @@
 # Threat model
 
+[Documentation index](README.md)
+
 ## Scope and trust boundaries
 
 This model covers `github.com/faustbrian/go-jsonapi/v2`, published as v2.0.0.
@@ -63,3 +65,5 @@ Review this model when a new decoder, query family, extension/profile scope,
 callback, transaction phase, network helper, reflection-based mapper, or code
 generator is introduced. Any new untrusted loop or recursion requires an
 explicit bound and an adversarial regression before release.
+
+Continue with [Security](security.md).

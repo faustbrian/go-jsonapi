@@ -1,5 +1,7 @@
 # Use-case cookbook
 
+[Documentation index](README.md)
+
 ## Preserve explicit empty and null values
 
 ```go
@@ -116,3 +118,5 @@ rejects a local reference before its defining add operation.
 All protocol errors support normal `errors.As`; `DecodeError` unwraps its
 parser cause and `AtomicExecutionError` unwraps both primary and rollback
 causes for `errors.Is`/`errors.As`.
+
+Continue with [Public API reference](api.md).

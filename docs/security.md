@@ -1,5 +1,7 @@
 # Security
 
+[Documentation index](README.md)
+
 ## Trust Boundary
 
 Treat every JSON:API document, query string, media-type parameter, extension

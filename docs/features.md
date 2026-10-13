@@ -1,5 +1,7 @@
 # Supported features
 
+[Documentation index](README.md)
+
 Status meanings:
 
 - **Implemented**: modeled, validated, encoded/decoded, and covered where the
@@ -83,3 +85,5 @@ Status meanings:
 | ORM integration | Out of scope |
 | Authentication and authorization | Out of scope |
 | Project-specific filtering language | Out of scope |
+
+Continue with [Public API reference](api.md).

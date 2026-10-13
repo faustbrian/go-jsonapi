@@ -1,5 +1,7 @@
 # Source documentation audit
 
+[Documentation index](README.md)
+
 ## Scope and reproducible inventory
 
 Baseline: `f8d69a11a1e7c49ffa0dd43766d9d8bb9cd955b4`. Tier A source prose:
@@ -243,3 +245,5 @@ routes. Ordinary shared CI selects strict source-documentation checking and
 requires its result. Native prerequisites, operation budgets, security and
 release controls are retained. Hosted exact-head evidence is recorded by the
 coordination ledger; configuration alone does not establish green delivery.
+
+Continue with [Public API reference](api.md).

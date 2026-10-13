@@ -1,5 +1,7 @@
 # FAQ
 
+[Documentation index](README.md)
+
 ## Is this an HTTP framework?
 
 No. It models, validates, parses, and serializes JSON:API protocol values. Use

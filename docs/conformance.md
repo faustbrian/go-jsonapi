@@ -1,5 +1,7 @@
 # Conformance evidence
 
+[Documentation index](README.md)
+
 Each row links a primary section and executable evidence. The rows group
 closely related normative statements; they do not infer server routing,
 persistence, authorization, or business semantics from package tests.

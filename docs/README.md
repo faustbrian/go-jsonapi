@@ -1,5 +1,7 @@
 # Documentation
 
+[Package README](../README.md)
+
 Use this index to evaluate specification coverage before production adoption.
 This documentation describes the published v2 API requiring Go 1.27.0 or
 later. The latest published stable release is `v2.0.0`.
@@ -50,3 +52,12 @@ from v1.
 - [Security policy](../SECURITY.md)
 - [Release history](../CHANGELOG.md)
 - [License](../LICENSE)
+
+## Ecosystem navigation
+
+See the [versioned Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.8.4/docs/ecosystem/README.md) for package
+selection, explicit ownership, and compatibility guidance.
+
+## Additional guides and reference
+
+- [Source documentation audit](source-documentation-audit.md)

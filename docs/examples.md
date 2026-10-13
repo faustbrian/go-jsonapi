@@ -1,5 +1,7 @@
 # End-to-end examples
 
+[Documentation index](README.md)
+
 The runnable examples live in [`examples_test.go`](../examples_test.go) and are
 executed by `go test ./... -run '^Example'`. They cover:
 
@@ -111,3 +113,5 @@ func (tx *transaction) RollbackAtomic(ctx context.Context) error {
 The `AtomicTransactionBeginner` implementation starts the transaction and
 returns this adapter. Avoid nesting independent transactions inside
 `ApplyAtomic`; atomicity belongs to the single adapter instance.
+
+Continue with [Public API reference](api.md).

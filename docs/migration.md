@@ -1,5 +1,7 @@
 # Migration notes
 
+[Documentation index](README.md)
+
 ## From v1 to v2
 
 The latest published stable release is `v2.0.0`. To upgrade from v1, change
@@ -116,3 +118,5 @@ old bug, a new bug, or an intentional compatibility change.
 Breaking changes before v1 and all migrations after v1 are recorded in
 `CHANGELOG.md`. A stable release will not remove or redefine exported APIs or
 wire behavior without a new major version.
+
+Continue with [Public API reference](api.md).

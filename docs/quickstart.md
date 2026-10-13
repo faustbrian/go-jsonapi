@@ -1,5 +1,7 @@
 # Quickstart
 
+[Documentation index](README.md)
+
 ## Construct and encode a document
 
 ```go

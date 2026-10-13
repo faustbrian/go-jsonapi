@@ -1,5 +1,7 @@
 # Extensions and profiles
 
+[Documentation index](README.md)
+
 JSON:API extensions and profiles have different authority. Extensions may add
 namespaced specification semantics; profiles may define implementation
 semantics without changing base JSON:API rules. The package keeps these seams
@@ -113,3 +115,5 @@ Before publishing an extension:
 For an implementation-only convention that does not alter JSON:API document
 semantics, prefer a query-family hook or application adapter instead of an
 extension.
+
+Continue with [Public API reference](api.md).

@@ -1,5 +1,7 @@
 # JSON:API specification decisions
 
+[Documentation index](README.md)
+
 This register records observable choices for JSON:API 1.1, its official
 extensions, profiles, recommendations, and referenced standards. The typed
 authority is [`specification/decisions.json`](../specification/decisions.json);
@@ -441,3 +443,5 @@ No known decision is unresolved at this revision. Maintained peer coverage is
 not claimed where a decision records only an official corpus or local contract.
 New ambiguities remain unresolved until they receive a stable identifier,
 authority analysis, executable evidence, and maintainer disposition.
+
+Continue with [Public API reference](api.md).

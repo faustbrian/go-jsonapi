@@ -1,5 +1,7 @@
 # Versioning and release guide
 
+[Documentation index](README.md)
+
 Releases are tag-driven and reproducible from a clean `main` commit.
 
 ## Prepare a release
