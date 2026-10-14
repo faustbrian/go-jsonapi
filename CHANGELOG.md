@@ -7,13 +7,6 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-
-- Reject JSON null for recognized string members in core and Atomic documents
-  instead of accepting a present empty string. DecodeError retains the exact
-  JSON Pointer and type code; explicit empty strings and legal null data, links
-  and attributes retain their existing semantics (JSONAPI-DEC-001).
-
 ### Changed
 
 - Clarify source contracts for wire presence and shallow ownership, decoder
@@ -21,6 +14,26 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   negotiation, cursor evidence and Atomic cleanup/durability boundaries.
   Record the prior null-to-empty string observation separately from the
   subsequent decoder repair.
+
+## [2.0.1] - 2026-10-14
+
+### Fixed
+
+- Reject JSON null for recognized string members in core, registered-codec and
+  Atomic documents while preserving legitimate empty strings and null data,
+  links and attributes. DecodeError retains its type code and exact JSON
+  Pointer. [96097d9318](https://github.com/faustbrian/go-jsonapi/commit/96097d93187fb7d9b2d7ebb9002cb38e3de6889b)
+
+### Changed
+
+- Align the maintained interoperability harness with the published v2 module
+  and retain its bounded maintained-peer fixtures. [8486553c55](https://github.com/faustbrian/go-jsonapi/commit/8486553c554a3823e52e36804b6cdef20236090b)
+- Clarify wire presence, shallow ownership, callback/resource limits, cursor
+  policy, Atomic durability and standalone adoption guidance. [87c3790aec](https://github.com/faustbrian/go-jsonapi/commit/87c3790aecae8826ef25b22aac28233a1ea8d650), [206dd451cc](https://github.com/faustbrian/go-jsonapi/commit/206dd451ccfbc97ab5d5bb892ee19590ac78f5de)
+- Maintain patched Go 1.27.2 development, authenticated verifier 2.5.1, pinned
+  actions/Node qualification and bounded source/security assurance while
+  preserving the public Go 1.27.0 minimum. Refresh development dependencies,
+  repository policy and update coverage. [8bc0e9f0a9](https://github.com/faustbrian/go-jsonapi/commit/8bc0e9f0a9c08191e887f52ed83f03b83044047c), [3c58743d51](https://github.com/faustbrian/go-jsonapi/commit/3c58743d519bfae46a3e162c4e726fa31a71f66c), [21c00a4f0a](https://github.com/faustbrian/go-jsonapi/commit/21c00a4f0abf24585e066bda2a29eb9e3aa37915), [1c5278cba3](https://github.com/faustbrian/go-jsonapi/commit/1c5278cba3b47000930364ebcf3913e5f1c13bf6), [94b17b381b](https://github.com/faustbrian/go-jsonapi/commit/94b17b381bc577dfda26a65a287f8a58c9d8bca1), [12ae4392db](https://github.com/faustbrian/go-jsonapi/commit/12ae4392db0e9338fc689a96339c1342ed91488b), [1229d79ba9](https://github.com/faustbrian/go-jsonapi/commit/1229d79ba98506e44d0418317ffbffa79e518639), [4b936d1628](https://github.com/faustbrian/go-jsonapi/commit/4b936d162838fc8610d8422c6c63894bff31fcf5), [94b86aea45](https://github.com/faustbrian/go-jsonapi/commit/94b86aea45848e83ffc64839d1f7d21ba314cb9d), [1bc719dfa9](https://github.com/faustbrian/go-jsonapi/commit/1bc719dfa98caf5fcd18073581630be7199eef8d), [f8d69a11a1](https://github.com/faustbrian/go-jsonapi/commit/f8d69a11a1e7c49ffa0dd43766d9d8bb9cd955b4), [0cde4051bc](https://github.com/faustbrian/go-jsonapi/commit/0cde4051bc6bfb435e4d9773a2fac96f49a91236), [8dd6ca1e95](https://github.com/faustbrian/go-jsonapi/commit/8dd6ca1e95f970df80fb922912df496553ae5239)
 
 ## [1.1.0] - 2026-10-05
 
@@ -287,5 +300,6 @@ the observable protocol choices covered by these entries.
 - Decouple validated changelog release dates from the wall-clock day on which
   a prepared tag is published.
 
-[Unreleased]: https://github.com/faustbrian/go-jsonapi/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/faustbrian/go-jsonapi/compare/v2.0.1...HEAD
 [1.0.0]: https://github.com/faustbrian/go-jsonapi/releases/tag/v1.0.0
+[2.0.1]: https://github.com/faustbrian/go-jsonapi/releases/tag/v2.0.1

@@ -10,10 +10,14 @@ Releases are tag-driven and reproducible from a clean `main` commit.
 2. move relevant `CHANGELOG.md` entries from `Unreleased` to a dated version;
 3. update migration notes for every breaking change;
 4. confirm documentation and executable examples reflect the release;
-5. run the complete local verification suite;
-6. merge the release preparation through normal review;
-7. create an annotated `vMAJOR.MINOR.PATCH` tag on the verified commit;
-8. push the tag; the release workflow verifies and publishes artifacts.
+5. complete the applicable root release qualification and rehearsal, using
+   authorized hosted execution for system-risk checks;
+6. deliver the reviewed preparation to `main` with its required exact-source
+   hosted CI green;
+7. create a signed annotated `vMAJOR.MINOR.PATCH` tag on that verified source
+   only with publication authority;
+8. verify the remote tag, prepare the deterministic source archive/checksums,
+   and publish the reviewed release notes and assets after qualification.
 
 ## Required verification
 
@@ -48,15 +52,22 @@ Run all fuzz targets for at least one minute each before a stable release.
 - the changelog date records release preparation and need not equal the later
   tag-push date;
 - tags are never force-updated or reused;
-- the workflow builds from the tag commit, not a mutable branch;
+- release artifacts are built from the verified tag commit, not a mutable
+  branch;
 - release notes are generated from the matching changelog section and commit
   history, then reviewed before publication when practical.
 
 ## Release artifacts
 
-Go modules are consumed from the Git tag and source archive. The GitHub release
-workflow creates checksummed source archives and a release entry; it does not
-publish binaries because this repository is a library.
+Go modules are consumed from the Git tag. The current CI workflows qualify
+source and scheduled assurance; they do not publish tags or release entries.
+Publication is a separate authorized operation. Build the deterministic source
+archive and checksum from the verified tag, retain its source identity, and
+upload the reviewed notes and assets to a draft release. Verify the assets and
+checksums before making that release public. Publish no library binaries.
+Finally verify the remote tag, public release assets and an actual clean
+`GOWORK=off` public consumer without replacements before reporting publication
+complete. A successful CI status alone does not prove those boundaries.
 
 ## Rollback
 
