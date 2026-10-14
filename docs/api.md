@@ -216,3 +216,11 @@ non-null `prev` and `next` links; `HasMore` separately means matching results
 were omitted because the used page size was reached.
 
 Continue with [Adoption guide](adoption.md).
+
+## String wire types
+
+Core and Atomic decoders refuse JSON null where a recognized member requires
+a string, returning `DecodeError` with code `type` and the exact JSON Pointer.
+Explicit empty strings still retain member presence. Null data, linkage,
+links and attribute values remain valid where their own protocol rules allow
+them; the string-member rule does not reinterpret those separate shapes.

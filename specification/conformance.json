@@ -4,8 +4,8 @@
     {
       "id": "JSONAPI-DEC-001",
       "authoritative_sources": ["jsonapi-1.1-source"],
-      "executable_evidence": ["TestDecodersIgnoreNonCompliantMembers", "TestAtAndNonCompliantMembersAreIgnored", "TestCoreCodecIgnoresUnregisteredExtensionMember"],
-      "fixtures": ["unknown_member_test.go"],
+      "executable_evidence": ["TestDecodersIgnoreNonCompliantMembers", "TestAtAndNonCompliantMembersAreIgnored", "TestCoreCodecIgnoresUnregisteredExtensionMember", "TestUnmarshalRejectsNullStringMembers", "TestUnmarshalAtomicRejectsNullStringMembers", "TestNullStringRefusalPreservesValidPresence"],
+      "fixtures": ["unknown_member_test.go", "codec_null_test.go"],
       "fuzz": ["FuzzUnmarshal"],
       "interoperability_evidence": [],
       "interoperability_classification": "not assessed",

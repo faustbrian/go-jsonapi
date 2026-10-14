@@ -44,8 +44,9 @@ func UnmarshalAtomicWith(
 // are rejected. Error returns a zero AtomicDocument, never partial operations.
 // It shares core UTF-8, byte, duplicate-member and structural scan policy,
 // then rejects core data/included members and validates Atomic shapes. No
-// operation is executed and no database transaction is acquired. Shared string
-// decoding retains the null-normalization limitation in UnmarshalWithLimits.
+// operation is executed and no database transaction is acquired. Recognized
+// string members share the null refusal and DecodeError contract documented by
+// UnmarshalWithLimits; explicit empty strings still retain their presence.
 func UnmarshalAtomicWithLimits(
 	payload []byte,
 	options AtomicValidationOptions,

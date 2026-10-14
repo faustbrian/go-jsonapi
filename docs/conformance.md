@@ -23,7 +23,7 @@ overlapping peer surface remain visibly unassessed.
 | Classification | Requirement and primary section | Implementation | Executable evidence |
 | --- | --- | --- | --- |
 | Core | [Top-level document shape, member exclusivity, and non-compliant-member handling](https://jsonapi.org/format/#document-top-level) | presence-aware root codec, non-compliant-member discard, and validator | `codec_test.go`, `unknown_member_test.go`, `validation_test.go`, `presence_test.go` |
-| Core | [Resource objects and identity](https://jsonapi.org/format/#document-resource-objects) | presence-aware resources and contextual identity rules | `document_test.go`, `identity_validation_test.go`, `context_validation_test.go` |
+| Core | [Resource objects and identity](https://jsonapi.org/format/#document-resource-objects) | presence-aware resources and contextual identity rules | `document_test.go`, `identity_validation_test.go`, `context_validation_test.go`, `codec_null_test.go` |
 | Core | [Resource fields and namespace constraints](https://jsonapi.org/format/#document-resource-object-fields) | field/member validator | `validation_edge_test.go`, `ownership_test.go` |
 | Core | [Resource identifier objects](https://jsonapi.org/format/#document-resource-identifier-objects) | identifier codec and validator | `identity_validation_test.go`, `validation_edge_test.go` |
 | Core | [Attributes](https://jsonapi.org/format/#document-resource-object-attributes) | exact JSON value codec | `codec_test.go`, `presence_test.go` |
@@ -63,7 +63,7 @@ overlapping peer surface remain visibly unassessed.
 | Classification | Requirement and primary section | Implementation | Executable evidence |
 | --- | --- | --- | --- |
 | Extension | [Document structure](https://jsonapi.org/ext/atomic/#document-structure) | strict operations/results/errors exclusivity | `atomic_codec_test.go`, `atomic_test.go` |
-| Extension | [Operation objects](https://jsonapi.org/ext/atomic/#operation-objects) | op, target, data, meta, and member validation | `atomic_test.go` |
+| Extension | [Operation objects](https://jsonapi.org/ext/atomic/#operation-objects) | op, target, data, meta, and member validation including scalar string types | `atomic_test.go`, `codec_null_test.go` |
 | Extension | [Adding resources](https://jsonapi.org/ext/atomic/#adding-resources) | resource-add shape and local identity validation | `atomic_test.go` |
 | Extension | [Updating resources](https://jsonapi.org/ext/atomic/#updating-resources) | target/data identity consistency | `atomic_test.go` |
 | Extension | [Removing resources](https://jsonapi.org/ext/atomic/#removing-resources) | target-required/data-forbidden validation | `atomic_test.go` |
@@ -116,3 +116,8 @@ condition for codec conformance.
   batches, queries, negotiation, and pagination metadata.
 - Short local fuzz runs are regression evidence, not proof that no parser bug
   exists; scheduled CI continues each target independently.
+
+The scalar-type regressions in `codec_null_test.go` cover null refusal at every
+shared string-member decoder seam and preserve explicit empty strings and
+separately legal null shapes. This is an implementation correction under the
+existing recognized-member validation rule, not a new specification policy.

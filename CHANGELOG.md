@@ -7,13 +7,20 @@ and releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject JSON null for recognized string members in core and Atomic documents
+  instead of accepting a present empty string. DecodeError retains the exact
+  JSON Pointer and type code; explicit empty strings and legal null data, links
+  and attributes retain their existing semantics (JSONAPI-DEC-001).
+
 ### Changed
 
 - Clarify source contracts for wire presence and shallow ownership, decoder
   versus callback limits, explicit registry activation, query/backend policy,
   negotiation, cursor evidence and Atomic cleanup/durability boundaries.
-  Document the existing null-to-empty string decoding limitation without
-  endorsing it as a protocol rule or changing executable behavior.
+  Record the prior null-to-empty string observation separately from the
+  subsequent decoder repair.
 
 ## [1.1.0] - 2026-10-05
 

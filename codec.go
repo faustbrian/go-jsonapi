@@ -58,7 +58,7 @@ func MarshalWith(document Document, options ValidationOptions) ([]byte, error) {
 }
 
 // Unmarshal decodes and validates a JSON:API document using default limits.
-// See UnmarshalWithLimits for admission, ownership and scalar-type limitations.
+// See UnmarshalWithLimits for admission, ownership and scalar-type rules.
 func Unmarshal(payload []byte) (Document, error) {
 	return UnmarshalWith(payload, ValidationOptions{})
 }
@@ -76,10 +76,10 @@ func UnmarshalWith(payload []byte, options ValidationOptions) (Document, error) 
 // are newly built. Unrecognized and @-Members are discarded after scanning,
 // while duplicate names at every depth are refused before semantic decoding.
 // The caller owns I/O, decompression and limiting allocations before this call.
-// String-member decoding currently inherits encoding/json null-to-empty-string
-// normalization. For example, a null resource ID can pass validation and encode
-// as an empty string; successful decoding does not prove every original scalar
-// wire type satisfied JSON:API. This is a decoder limitation, not a null-ID rule.
+// Recognized string members reject JSON null with a DecodeError whose code is
+// "type" and whose path identifies the member. Explicit empty strings retain
+// presence; separately legal null data, linkage, links and attributes are not
+// subject to the string-member rule.
 func UnmarshalWithLimits(
 	payload []byte,
 	options ValidationOptions,
@@ -831,9 +831,12 @@ func discardUnknown(object map[string]json.RawMessage, allowed ...string) {
 	}
 }
 
-// Native string decoding accepts JSON null as the zero string; callers record
-// presence separately. No independent null-type refusal occurs at this seam.
+// Presence is tracked separately, but a present string member must not use
+// encoding/json's null-to-zero-string coercion: null and "" differ on the wire.
 func decodeString(raw json.RawMessage, path string, target *string) error {
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return decodeFailure(path, "type", "value must be a string", nil)
+	}
 	if err := json.Unmarshal(raw, target); err != nil {
 		return decodeFailure(path, "type", "value must be a string", err)
 	}

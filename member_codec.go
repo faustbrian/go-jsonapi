@@ -205,7 +205,8 @@ func (codec *Codec) Marshal(document Document) ([]byte, error) {
 // registered extraction; unknown values cannot satisfy required core members.
 // Decoder results use owned containers, but validators borrow them synchronously
 // and must not mutate them or retain them for uncoordinated later use. It shares
-// the native string null-normalization limitation documented by UnmarshalWithLimits.
+// the string-member null refusal and DecodeError contract documented by
+// UnmarshalWithLimits. Explicit empty strings still retain member presence.
 func (codec *Codec) Unmarshal(payload []byte) (Document, error) {
 	if err := validateJSONPayload(payload, codec.limits); err != nil {
 		return Document{}, err

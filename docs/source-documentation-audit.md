@@ -247,3 +247,13 @@ release controls are retained. Hosted exact-head evidence is recorded by the
 coordination ledger; configuration alone does not establish green delivery.
 
 Continue with [Public API reference](api.md).
+
+## 2026-10-14 Harden follow-up
+
+The historical null-string observation above is preserved as original evidence.
+A separately scoped decoder repair now rejects null for recognized core and
+Atomic string members; it does not redefine the selected JSON:API authorities
+or the source-only audit's original verdict. Fresh public-boundary regressions
+failed on the original runtime and pass with the shared string decoder repair;
+explicit empty strings and legal null shapes remain accepted. See the
+[current conformance map](conformance.md) and [changelog](../CHANGELOG.md).

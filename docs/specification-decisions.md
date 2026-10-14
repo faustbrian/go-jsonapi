@@ -33,8 +33,8 @@ link to their replacement.
 - **Resource consequences:** Unknown-member scanning remains subject to configured byte, depth, member, and value limits.
 - **Compatibility consequences:** New unknown members do not break otherwise valid documents.
 - **Wire consequences:** Ignored members are not emitted when the document is marshaled again.
-- **Executable evidence:** TestDecodersIgnoreNonCompliantMembers, TestAtAndNonCompliantMembersAreIgnored, TestCoreCodecIgnoresUnregisteredExtensionMember
-- **Fixture evidence:** unknown_member_test.go
+- **Executable evidence:** TestDecodersIgnoreNonCompliantMembers, TestAtAndNonCompliantMembersAreIgnored, TestCoreCodecIgnoresUnregisteredExtensionMember, TestUnmarshalRejectsNullStringMembers, TestUnmarshalAtomicRejectsNullStringMembers, TestNullStringRefusalPreservesValidPresence
+- **Fixture evidence:** unknown_member_test.go, codec_null_test.go
 - **Fuzz evidence:** FuzzUnmarshal
 - **Interoperability evidence:** not assessed
 - **Differential evidence:** specification/differential.tsv

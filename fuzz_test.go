@@ -16,6 +16,7 @@ func FuzzUnmarshal(f *testing.F) {
 		[]byte(`{"data":null}`),
 		[]byte(`{"data":[]}`),
 		[]byte(`{"data":{"type":"articles","id":"1"}}`),
+		[]byte(`{"data":{"type":"articles","id":null}}`),
 		[]byte(`{"errors":[{"status":"400","title":"Bad request"}]}`),
 		[]byte(`{"data":null,"data":[]}`),
 		[]byte(`{"data":`),
@@ -45,6 +46,7 @@ func FuzzUnmarshal(f *testing.F) {
 func FuzzUnmarshalAtomic(f *testing.F) {
 	seeds := [][]byte{
 		[]byte(`{"atomic:operations":[{"op":"remove","href":"/articles/1"}]}`),
+		[]byte(`{"atomic:operations":[{"op":"remove","ref":{"type":"articles","id":null}}]}`),
 		[]byte(`{"atomic:results":[{}]}`),
 		[]byte(`{"errors":[{"status":"409"}]}`),
 		[]byte(`{"data":null}`),

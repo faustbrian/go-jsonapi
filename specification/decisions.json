@@ -36,9 +36,12 @@
       "executable_evidence": [
         "TestDecodersIgnoreNonCompliantMembers",
         "TestAtAndNonCompliantMembersAreIgnored",
-        "TestCoreCodecIgnoresUnregisteredExtensionMember"
+        "TestCoreCodecIgnoresUnregisteredExtensionMember",
+        "TestUnmarshalRejectsNullStringMembers",
+        "TestUnmarshalAtomicRejectsNullStringMembers",
+        "TestNullStringRefusalPreservesValidPresence"
       ],
-      "fixture_evidence": ["unknown_member_test.go"],
+      "fixture_evidence": ["unknown_member_test.go", "codec_null_test.go"],
       "fuzz_evidence": ["FuzzUnmarshal"],
       "interoperability_evidence": [],
       "differential_evidence": ["specification/differential.tsv"],

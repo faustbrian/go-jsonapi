@@ -33,9 +33,10 @@ vulnerability reporting. See the [threat model](threat-model.md) and
 
 ## Original wire types
 
-Current string-member decoding inherits `encoding/json` null-to-empty-string
-normalization. A resource `id: null` can therefore be accepted and re-encoded
-as `id: ""`. This is a known decoder limitation, not JSON:API permission for
-null identifiers. Successful decoding is not proof that every original scalar
-wire type was valid; do not infer that stronger guarantee from checked encoding
-or decoded Go string fields.
+Recognized string members in core and Atomic documents reject JSON null with
+an inspectable `DecodeError` at the member's JSON Pointer. A present empty
+string remains distinct from an omitted member; valid null primary/linkage
+data, null links and null attribute values retain their own protocol semantics.
+This fixes the prior null-to-empty normalization recorded in the
+[source documentation audit](source-documentation-audit.md). It does not add
+application-level identity, authorization or callback validation.
