@@ -7,4 +7,4 @@ require (
 	github.com/faustbrian/go-jsonapi/v2 v2.0.0
 )
 
-require golang.org/x/text v0.42.0 // indirect
+require golang.org/x/text v0.43.0 // indirect
